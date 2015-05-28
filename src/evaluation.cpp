@@ -50,6 +50,8 @@ string keypoints_list[] = {KP_AGAST_DETECTOR_7_12s,
                            KP_SUSAN,
                            KP_UNIFORM_SAMPLING};
 
+string descriptors_list[] = {"test"};
+
 
 class PclFeaturesEvaluation
 {
@@ -120,25 +122,38 @@ public:
     }
   }
 
+  /** \brief Creates a list keypoint/descriptor combinations
+    */
+  void createCombinations()
+  {
+    uint kp_size = sizeof(keypoints_list)/sizeof(keypoints_list[0]);
+    uint desc_size = sizeof(descriptors_list)/sizeof(descriptors_list[0]);
+    for (uint i=0; i<kp_size; i++)
+    {
+      for (uint j=0; j<desc_size; j++)
+        comb_.push_back(make_pair(keypoints_list[i], descriptors_list[j]));
+    }
+  }
+
   /** \brief Performs the evaluation
     */
   void evaluate()
   {
-    // Step 1: create the keypoints<->descriptors combinations
-
+    // Step 1: create the keypoints/descriptors combinations
+    createCombinations();
 
     // Step 2: loop over the combinations
-    uint size = sizeof(keypoints_list)/sizeof(keypoints_list[0]);
-    for (uint i=0; i<size; i++)
+    for (uint i=0; i<comb_.size(); i++)
     {
-      // string kp_type = comb_[i].first;
-      // string desc_type = comb_[i].second;
+      string kp_type = comb_[i].first;
+      string desc_type = comb_[i].second;
+
       ROS_INFO("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#");
-      ROS_INFO_STREAM("Evaluating keypoint: " << keypoints_list[i]);
+      ROS_INFO_STREAM("Evaluating: " << kp_type << " / " << desc_type);
 
       // Extract the keypoints
       ros::WallTime start = ros::WallTime::now();
-      Keypoints kp(keypoints_list[i]);
+      Keypoints kp(kp_type);
       PointCloudRGB::Ptr keypoints(new PointCloudRGB);
       kp.compute(cloud_1_, keypoints);
       ros::WallDuration runtime = ros::WallTime::now() - start;
