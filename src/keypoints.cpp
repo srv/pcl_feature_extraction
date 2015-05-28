@@ -162,8 +162,8 @@ void Keypoints::compute(const PointCloudRGB::Ptr& cloud, PointCloudRGB::Ptr& clo
     normals(cloud, cloud_normals);
 
     // Estimate the sift interest points using normals values from xyz as the Intensity variants
-    SIFTKeypoint<PointNormal, PointWithScale> sift;
-    PointCloud<PointWithScale>::Ptr keypoints(new PointCloud<PointWithScale>);
+    SIFTKeypoint<PointNormal, PointXYZI> sift;
+    PointCloud<PointXYZI>::Ptr keypoints(new PointCloud<PointXYZI>);
     search::KdTree<PointNormal>::Ptr tree(new search::KdTree<PointNormal> ());
     sift.setSearchMethod(tree);
     sift.setScales(min_scale, n_octaves, n_scales_per_octave);
@@ -284,7 +284,6 @@ void Keypoints::getKeypointsCloud(const PointCloudRGB::Ptr& cloud,
   if (!cloud || !keypoints || cloud->points.empty() || keypoints->points.empty())
     return;
 
-  // Init the kdtree
   KdTreeFLANN<PointRGB> kdtree;
   kdtree.setInputCloud(cloud);
 
@@ -301,69 +300,14 @@ void Keypoints::getKeypointsCloud(const PointCloudRGB::Ptr& cloud,
       continue;
 
     // Search this point into the cloud
-    int idx = getCloudIdx(kdtree, pt);
-    if (idx >= 0)
-      cloud_keypoints->points.push_back(cloud->points[idx]);
+    vector<int> idx_vec;
+    vector<float> dist;
+    if (kdtree.nearestKSearch(pt, 1, idx_vec, dist) > 0)
+    {
+      if (dist[0] < 0.0001)
+        cloud_keypoints->points.push_back(cloud->points[idx_vec[0]]);
+    }
   }
-}
-
-/** \brief Get keypoint cloud indices from pointcloud of PointUVs
-  * @return
-  * \param Input cloud
-  * \param Input keypoints of type PointWithScale
-  * \param The output cloud indices corresponding to the detected keypoints
-  */
-void Keypoints::getKeypointsCloud(const PointCloudRGB::Ptr& cloud,
-                                  const PointCloud<PointWithScale>::Ptr& keypoints,
-                                  PointCloudRGB::Ptr& cloud_keypoints)
-{
-  // Reset output
-  cloud_keypoints.reset(new PointCloudRGB);
-
-  // Sanity check
-  if (!cloud || !keypoints || cloud->points.empty() || keypoints->points.empty())
-    return;
-
-  // Init the kdtree
-  KdTreeFLANN<PointRGB> kdtree;
-  kdtree.setInputCloud(cloud);
-
-  for (size_t i=0; i<keypoints->size(); ++i)
-  {
-    // Get the point in the pointcloud
-    PointWithScale pt_tmp = keypoints->points[i];
-    PointRGB pt;
-    pt.x = pt_tmp.x;
-    pt.y = pt_tmp.y;
-    pt.z = pt_tmp.z;
-
-    if (!pcl_isfinite(pt.x) || !pcl_isfinite(pt.y) || !pcl_isfinite(pt.z))
-      continue;
-
-    // Search this point into the cloud
-    int idx = getCloudIdx(kdtree, pt);
-    if (idx >= 0)
-      cloud_keypoints->points.push_back(cloud->points[idx]);
-  }
-}
-
-/** \brief Get the cloud index of a give point
-  * @return the cloud index for the given point
-  * \param Input KdTree with the cloud
-  * \param Point to be searched
-  */
-int Keypoints::getCloudIdx(KdTreeFLANN<PointRGB> kdtree, PointRGB pt)
-{
-  if (!pcl_isfinite(pt.x) || !pcl_isfinite(pt.y) || !pcl_isfinite(pt.z))
-    return -1;
-
-  // Search this point into the cloud
-  vector<int> idx_vec;
-  vector<float> dist;
-  if (kdtree.nearestKSearch(pt, 1, idx_vec, dist) > 0)
-    return idx_vec[0];
-  else
-    return -1;
 }
 
 /** \brief Computes the cloud resolution. From http://pointclouds.org/documentation/tutorials/correspondence_grouping.php

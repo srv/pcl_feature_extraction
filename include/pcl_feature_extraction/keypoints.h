@@ -72,13 +72,6 @@ public:
   void getKeypointsCloud( const PointCloudRGB::Ptr& cloud,
                           const PointCloud<PointXYZI>::Ptr& keypoints,
                           PointCloudRGB::Ptr& cloud_keypoints);
-  void getKeypointsCloud( const PointCloudRGB::Ptr& cloud,
-                          const PointCloud<PointWithScale>::Ptr& keypoints,
-                          PointCloudRGB::Ptr& cloud_keypoints);
-
-  // Get the cloud index of a give point
-  int getCloudIdx(pcl::KdTreeFLANN<PointRGB> kdtree,
-                  PointRGB pt);
 
   // Computes the cloud resolution
   double computeCloudResolution(const PointCloudRGB::Ptr& cloud);

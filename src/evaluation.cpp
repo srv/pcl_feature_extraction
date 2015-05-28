@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <ros/ros.h>
 #include <boost/filesystem.hpp>
+#include <boost/assign/list_inserter.hpp>
 
 // Custom
 #include "pcl_feature_extraction/keypoints.h"
@@ -36,6 +37,19 @@ void stopHandler(int s)
   stopHandlerCb(s);
   ros::shutdown();
 }
+
+// Define the list of keypoints and descriptors
+string keypoints_list[] = {KP_AGAST_DETECTOR_7_12s,
+                           KP_AGAST_DETECTOR_5_8,
+                           KP_OAST_DETECTOR_9_16,
+                           KP_HARRIS_3D,
+                           KP_HARRIS_6D,
+                           KP_ISS,
+                           KP_NARF,
+                           KP_SIFT,
+                           KP_SUSAN,
+                           KP_UNIFORM_SAMPLING};
+
 
 class PclFeaturesEvaluation
 {
@@ -114,14 +128,24 @@ public:
 
 
     // Step 2: loop over the combinations
-    for (uint i=0; i<comb_.size(); i++)
+    uint size = sizeof(keypoints_list)/sizeof(keypoints_list[0]);
+    for (uint i=0; i<size; i++)
     {
-      string kp_type = comb_[i].first;
-      string desc_type = comb_[i].second;
+      // string kp_type = comb_[i].first;
+      // string desc_type = comb_[i].second;
+      ROS_INFO("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#");
+      ROS_INFO_STREAM("Evaluating keypoint: " << keypoints_list[i]);
 
-      Keypoints kp(kp_type);
+      // Extract the keypoints
+      ros::WallTime start = ros::WallTime::now();
+      Keypoints kp(keypoints_list[i]);
       PointCloudRGB::Ptr keypoints(new PointCloudRGB);
       kp.compute(cloud_1_, keypoints);
+      ros::WallDuration runtime = ros::WallTime::now() - start;
+
+      ROS_INFO_STREAM("Done! Total cloud points: " << cloud_1_->points.size() <<
+                      ".    Number of keypoints: " << keypoints->points.size() <<
+                      ".    Runtime: " << runtime.toSec() << "\n");
     }
   }
 
