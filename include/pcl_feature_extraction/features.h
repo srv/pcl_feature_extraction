@@ -101,6 +101,7 @@ class Features
 
   // Normal estimation
   void estimateNormals(const PointCloudRGB::Ptr& cloud,
+                       const PointCloudRGB::Ptr& surface,
                        PointCloud<Normal>::Ptr& normals);
 
   // Compute the intensity gradients

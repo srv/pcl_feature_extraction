@@ -60,7 +60,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     ShapeContext3DEstimation<PointRGB, Normal, ShapeContext1980> desc;
     desc.setSearchSurface(cloud);
     desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
     desc.setSearchMethod(kdtree);
@@ -125,7 +125,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     FPFHEstimation<PointRGB, Normal, FPFHSignature33> desc;
     desc.setSearchSurface(cloud);
     desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
     desc.setSearchMethod(kdtree);
@@ -147,7 +147,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     VFHEstimation<PointRGB, Normal, VFHSignature308> desc;
     desc.setSearchSurface(cloud);
     desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
     desc.setSearchMethod(kdtree);
@@ -159,7 +159,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     CVFHEstimation<PointRGB, Normal, VFHSignature308> desc;
     desc.setSearchSurface(cloud);
     desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
     desc.setSearchMethod(kdtree);
@@ -171,7 +171,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     PFHEstimation<PointRGB, Normal, PFHSignature125> desc;
     desc.setSearchSurface(cloud);
     desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
     desc.setSearchMethod(kdtree);
@@ -190,7 +190,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     PrincipalCurvaturesEstimation<PointXYZ, Normal, PrincipalCurvatures> desc;
     desc.setSearchSurface(cloud_xyz);
     desc.setInputCloud(keypoints_xyz);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
     desc.setSearchMethod(kdtree);
@@ -203,7 +203,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     PointCloud<PointXYZI>::Ptr keypoint_intensities(new PointCloud<PointXYZI>);
     PointCloud<PointXYZI>::Ptr cloud_intensities(new PointCloud<PointXYZI>);
     PointCloud<IntensityGradient>::Ptr keypoint_gradients(new PointCloud<IntensityGradient>);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     PointCloudXYZRGBtoXYZI(*keypoints, *keypoint_intensities);
     PointCloudXYZRGBtoXYZI(*cloud, *cloud_intensities);
     computeGradient(keypoint_intensities, keypoint_normals, *keypoint_gradients);
@@ -232,7 +232,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     SHOTEstimationOMP<PointXYZ, Normal, SHOT352> desc;
     desc.setSearchSurface(cloud_xyz);
     desc.setInputCloud(keypoints_xyz);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
     desc.setSearchMethod(kdtree);
@@ -244,7 +244,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
     SHOTColorEstimationOMP<PointRGB, Normal, SHOT1344> desc;
     desc.setSearchSurface(cloud);
     desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, *keypoint_normals);
+    estimateNormals(keypoints, cloud, keypoint_normals);
     desc.setInputNormals(keypoint_normals);
     search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
     desc.setSearchMethod(kdtree);
@@ -276,15 +276,18 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
 
 /** \brief Normal estimation
   * @return
-  * \param Input cloud
+  * \param Cloud where normals will be estimated
+  * \param Cloud surface with additional information to estimate the features for every point in the input dataset
   * \param Output cloud with normals
   */
 template<typename FeatureType>
 void Features<FeatureType>::estimateNormals(const PointCloudRGB::Ptr& cloud,
+                                            const PointCloudRGB::Ptr& surface,
                                             PointCloud<Normal>::Ptr& normals)
 {
   NormalEstimation<PointRGB, Normal> normalEstimation;
   normalEstimation.setInputCloud(cloud);
+  normalEstimation.setSearchSurface(surface);
   normalEstimation.setRadiusSearch(0.05);
   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
   normalEstimation.setSearchMethod(kdtree);
