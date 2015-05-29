@@ -27,7 +27,8 @@ include_directories(include
 # Localization node
 add_executable(pcl_feature_extraction
 						src/evaluation.cpp
-            src/keypoints.cpp)
+            src/keypoints.cpp
+            src/features.cpp)
 target_link_libraries(pcl_feature_extraction
 						${eigen_LIBRARIES}
 						${catkin_LIBRARIES})

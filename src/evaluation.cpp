@@ -8,6 +8,7 @@
 
 // Custom
 #include "pcl_feature_extraction/keypoints.h"
+#include "pcl_feature_extraction/features.h"
 
 // Generic pcl
 #include <pcl/common/common.h>
@@ -50,7 +51,29 @@ string keypoints_list[] = {KP_AGAST_DETECTOR_7_12s,
                            KP_SUSAN,
                            KP_UNIFORM_SAMPLING};
 
-string descriptors_list[] = {"test"};
+string descriptors_list[] = {DESC_SHAPE_CONTEXT,
+                             DESC_USC,
+                             DESC_BOARD,
+                             DESC_BOUNDARY,
+                             DESC_INT_GRAD,
+                             DESC_INT_SPIN,
+                             DESC_RIB,
+                             DESC_SPIN_IMAGE,
+                             DESC_MOMENT_INV,
+                             DESC_CRH,
+                             DESC_DIFF_OF_NORM,
+                             DESC_ESF,
+                             DESC_FPFH,
+                             DESC_NARF,
+                             DESC_VFH,
+                             DESC_CVFH,
+                             DESC_PFH,
+                             DESC_PPAL_CURV,
+                             DESC_RIFT,
+                             DESC_RSD,
+                             DESC_SHOT,
+                             DESC_SHOT_COLOR,
+                             DESC_SHOT_LRF};
 
 
 class PclFeaturesEvaluation
