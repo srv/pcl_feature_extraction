@@ -70,7 +70,6 @@ string descriptors_list[] = {DESC_SHAPE_CONTEXT,
                              DESC_PFH,
                              DESC_PPAL_CURV,
                              DESC_RIFT,
-                             DESC_RSD,
                              DESC_SHOT,
                              DESC_SHOT_COLOR,
                              DESC_SHOT_LRF};

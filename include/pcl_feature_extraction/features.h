@@ -6,6 +6,8 @@
 #ifndef FEATURES_H
 #define FEATURES_H
 
+#include <ros/ros.h>
+
 // Generic pcl
 #include <pcl/common/common.h>
 #include <pcl/point_types.h>
@@ -39,7 +41,6 @@ using namespace pcl::registration;
 ///  - Point Feature Histogram (PFH)
 ///  - Principal Curvatures (PC)
 ///  - Rotation Invariant Feature Transform (RIFT)
-///  - Radius-based Surface Descriptor (RSD)
 ///  - Signature of Histograms of OrienTations (SHOT) using OpenMP
 ///  - SHOT with colour using OpenMP (SHOTColor) using OpenMP
 ///  - SHOT Local Reference Frame using OpenMP (SHOTLRF)
@@ -64,7 +65,6 @@ static const string DESC_CVFH          = "CVFH";
 static const string DESC_PFH           = "PFH";
 static const string DESC_PPAL_CURV     = "PrincipalCurvatures";
 static const string DESC_RIFT          = "RIFT";
-static const string DESC_RSD           = "RSD";
 static const string DESC_SHOT          = "SHOT";
 static const string DESC_SHOT_COLOR    = "SHOTColore";
 static const string DESC_SHOT_LRF      = "SHOTLocalReferenceFrame";
@@ -73,6 +73,7 @@ typedef PointXYZRGB PointRGB;
 typedef PointCloud<PointXYZ> PointCloudXYZ;
 typedef PointCloud<PointRGB> PointCloudRGB;
 
+template<typename FeatureType>
 class Features
 {
  public:
@@ -81,16 +82,16 @@ class Features
   explicit Features(const std::string& descriptor_type);
 
   // Feature computation
-  void compute(const PointCloudRGB& cloud, const PointCloudRGB& keypoints) const;
+  void compute(const PointCloudRGB::Ptr& cloud,
+               const PointCloudRGB::Ptr& keypoints,
+               typename PointCloud<FeatureType>::Ptr& descriptors);
 
   // Search for correspondences
-  template<typename FeatureType>
   void findCorrespondences(typename PointCloud<FeatureType>::Ptr source,
                            typename PointCloud<FeatureType>::Ptr target,
                            CorrespondencesPtr correspondences);
 
   // Correspondence filtering
-  template<typename FeatureType>
   void filterCorrespondences(typename PointCloud<FeatureType>::Ptr source,
                              typename PointCloud<FeatureType>::Ptr target,
                              CorrespondencesPtr correspondences,
