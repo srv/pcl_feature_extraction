@@ -73,29 +73,47 @@ typedef PointXYZRGB PointRGB;
 typedef PointCloud<PointXYZ> PointCloudXYZ;
 typedef PointCloud<PointRGB> PointCloudRGB;
 
-class Features {
+class Features
+{
  public:
+
+  // Class constructor
   explicit Features(const std::string& descriptor_type);
-  void compute(const PointCloudRGB& cloud, const PointCloudRGB& keypoints);
-  template<typename FeatureType>
-  void filterCorrespondences(typename PointCloud<FeatureType>::Ptr source,
-                             typename PointCloud<FeatureType>::Ptr target,
-                             CorrespondencesPtr correspondences,
-                             CorrespondencesPtr filtered_correspondences);
+
+  // Feature computation
+  void compute(const PointCloudRGB& cloud, const PointCloudRGB& keypoints) const;
+
+  // Search for correspondences
   template<typename FeatureType>
   void findCorrespondences(typename PointCloud<FeatureType>::Ptr source,
                            typename PointCloud<FeatureType>::Ptr target,
                            CorrespondencesPtr correspondences);
 
- private:
-  std::string descriptor_type_;
+  // Correspondence filtering
+  template<typename FeatureType>
+  void filterCorrespondences(typename PointCloud<FeatureType>::Ptr source,
+                             typename PointCloud<FeatureType>::Ptr target,
+                             CorrespondencesPtr correspondences,
+                             CorrespondencesPtr filtered_correspondences);
+
+ protected:
+
+  // Normal estimation
   void estimateNormals(const PointCloudRGB::Ptr& cloud,
                        PointCloud<Normal>::Ptr& normals);
+
+  // Compute the intensity gradients
   void computeGradient(const PointCloud<PointXYZI>::Ptr& intensity,
                        const PointCloud<Normal>::Ptr& normals,
                        PointCloud<IntensityGradient>::Ptr& gradients);
+
+  // Converts a pointcloud to a range image
   void convertToRangeImage(const PointCloudRGB::Ptr& cloud,
                            RangeImagePlanar& range_image);
+
+ private:
+
+  string descriptor_type_;  //!> Stores the keypoint type
 };
 
 #endif  // FEATURES_H

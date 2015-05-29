@@ -15,21 +15,6 @@
 #include <pcl/range_image/range_image_planar.h>
 #include <pcl/visualization/range_image_visualizer.h>
 
-// pcl keypoints
-#include <pcl/impl/point_types.hpp>
-#include <pcl/keypoints/agast_2d.h>
-#include <pcl/keypoints/harris_3d.h>
-#include <pcl/keypoints/harris_6d.h>
-#include <pcl/keypoints/sift_keypoint.h>
-#include <pcl/keypoints/iss_3d.h>
-#include <pcl/keypoints/narf_keypoint.h>
-#include <pcl/keypoints/susan.h>
-#include <pcl/keypoints/uniform_sampling.h>
-
-// pcl features
-#include <pcl/features/normal_3d.h>
-#include <pcl/features/range_image_border_extractor.h>
-
 using namespace std;
 using namespace pcl;
 

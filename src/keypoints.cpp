@@ -1,5 +1,20 @@
 #include "pcl_feature_extraction/keypoints.h"
 
+// pcl keypoints
+#include <pcl/impl/point_types.hpp>
+#include <pcl/keypoints/agast_2d.h>
+#include <pcl/keypoints/harris_3d.h>
+#include <pcl/keypoints/harris_6d.h>
+#include <pcl/keypoints/sift_keypoint.h>
+#include <pcl/keypoints/iss_3d.h>
+#include <pcl/keypoints/narf_keypoint.h>
+#include <pcl/keypoints/susan.h>
+#include <pcl/keypoints/uniform_sampling.h>
+
+// pcl features
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/range_image_border_extractor.h>
+
 // More code: http://robotica.unileon.es/~victorm/
 
 /** \brief Class constructor. Initialize the class
@@ -220,7 +235,7 @@ void Keypoints::normals(const PointCloudRGB::Ptr& cloud, PointCloud<PointNormal>
 
   ne.setInputCloud(cloud);
   ne.setSearchMethod(tree_n);
-  ne.setRadiusSearch(0.1);
+  ne.setRadiusSearch(0.05);
   ne.compute(*cloud_normals);
 
   // Copy the xyz info from input cloud and add it to cloud_normals as the xyz field in PointNormals estimation is zero
