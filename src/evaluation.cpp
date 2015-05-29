@@ -17,9 +17,6 @@
 #include <pcl/registration/icp.h>
 #include <pcl/io/pcd_io.h>
 
-// Features pcl
-#include <pcl/features/3dsc.h>
-
 using namespace pcl;
 using namespace std;
 using namespace boost;
@@ -99,11 +96,11 @@ private:
   ros::NodeHandle nh_;
   ros::NodeHandle nhp_;
 
-  // Pointcloud files
+  // PointCloud files
   string cloud_filename_1_;
   string cloud_filename_2_;
 
-  // Pointclouds
+  // PointClouds
   PointCloudRGB::Ptr cloud_1_;
   PointCloudRGB::Ptr cloud_2_;
 
@@ -143,7 +140,7 @@ public:
     nhp_.param("cloud_filename_2", cloud_filename_2_, string(""));
   }
 
-  /** \brief Read the pointclouds
+  /** \brief Read the PointClouds
     */
   void readClouds()
   {
@@ -196,212 +193,108 @@ public:
       ros::WallDuration kp_runtime = ros::WallTime::now() - kp_start;
 
       // Extract the features
+      ros::WallTime desc_start = ros::WallTime::now();
       if (desc_type == DESC_SHAPE_CONTEXT)
       {
         PointCloud<ShapeContext1980>::Ptr features(new PointCloud<ShapeContext1980>);
         Features<ShapeContext1980> feat(desc_type);
       }
-      // else if (desc_type == DESC_USC)
-      // {
+      else if (desc_type == DESC_USC)
+      {
 
-      // }
-      // else if (desc_type == DESC_BOARD)
-      // {
+      }
+      else if (desc_type == DESC_BOARD)
+      {
 
-      // }
-      // else if (desc_type == DESC_BOUNDARY)
-      // {
+      }
+      else if (desc_type == DESC_BOUNDARY)
+      {
 
-      // }
-      // else if (desc_type == DESC_INT_GRAD)
-      // {
+      }
+      else if (desc_type == DESC_INT_GRAD)
+      {
 
-      // }
-      // else if (desc_type == DESC_INT_SPIN)
-      // {
+      }
+      else if (desc_type == DESC_INT_SPIN)
+      {
 
-      // }
-      // else if (desc_type == DESC_RIB)
-      // {
+      }
+      else if (desc_type == DESC_RIB)
+      {
 
-      // }
-      // else if (desc_type == DESC_SPIN_IMAGE)
-      // {
+      }
+      else if (desc_type == DESC_SPIN_IMAGE)
+      {
 
-      // }
-      // else if (desc_type == DESC_MOMENT_INV)
-      // {
+      }
+      else if (desc_type == DESC_MOMENT_INV)
+      {
 
-      // }
-      // else if (desc_type == DESC_CRH)
-      // {
+      }
+      else if (desc_type == DESC_CRH)
+      {
 
-      // }
-      // else if (desc_type == DESC_DIFF_OF_NORM)
-      // {
+      }
+      else if (desc_type == DESC_DIFF_OF_NORM)
+      {
 
 
-      // }
-      // else if (desc_type == DESC_ESF)
-      // {
-      //   ESFEstimation<PointRGB, ESFSignature640> desc;
-      //   desc.setSearchSurface(cloud);
-      //   desc.setInputCloud(keypoints);
-      //   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_FPFH)
-      // {
-      //   FPFHEstimation<PointRGB, Normal, FPFHSignature33> desc;
-      //   desc.setSearchSurface(cloud);
-      //   desc.setInputCloud(keypoints);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_NARF)
-      // {
-      //   PointCloud<Narf36>::Ptr descriptors(new PointCloud<Narf36>);
-      //   RangeImagePlanar range_image;
-      //   convertToRangeImage(cloud, range_image);
-      //   NarfDescriptor desc(&range_image, &keypoints);
-      //   desc.getParameters().support_size = 0.2f;
-      //   desc.getParameters().rotation_invariant = true;
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_VFH)
-      // {
-      //   VFHEstimation<PointRGB, Normal, VFHSignature308> desc;
-      //   desc.setSearchSurface(cloud);
-      //   desc.setInputCloud(keypoints);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_CVFH)
-      // {
-      //   CVFHEstimation<PointRGB, Normal, VFHSignature308> desc;
-      //   desc.setSearchSurface(cloud);
-      //   desc.setInputCloud(keypoints);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_PFH)
-      // {
-      //   PFHEstimation<PointRGB, Normal, PFHSignature125> desc;
-      //   desc.setSearchSurface(cloud);
-      //   desc.setInputCloud(keypoints);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_PPAL_CURV)
-      // {
-      //   // Convert to xyz
-      //   PointCloudXYZ::Ptr cloud_xyz(new PointCloudXYZ);
-      //   copyPointCloud(*cloud, *cloud_xyz);
-      //   PointCloudXYZ::Ptr keypoints_xyz(new PointCloudXYZ);
-      //   copyPointCloud(*keypoints, *keypoints_xyz);
-
-      //   // Estimate features
-      //   PrincipalCurvaturesEstimation<PointXYZ, Normal, PrincipalCurvatures> desc;
-      //   desc.setSearchSurface(cloud_xyz);
-      //   desc.setInputCloud(keypoints_xyz);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_RIFT)
-      // {
-      //   // Compute gradients
-      //   PointCloud<PointXYZI>::Ptr keypoint_intensities(new PointCloud<PointXYZI>);
-      //   PointCloud<PointXYZI>::Ptr cloud_intensities(new PointCloud<PointXYZI>);
-      //   PointCloud<IntensityGradient>::Ptr keypoint_gradients(new PointCloud<IntensityGradient>);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   PointCloudXYZRGBtoXYZI(*keypoints, *keypoint_intensities);
-      //   PointCloudXYZRGBtoXYZI(*cloud, *cloud_intensities);
-      //   computeGradient(keypoint_intensities, keypoint_normals, *keypoint_gradients);
-
-      //   // Estimate features
-      //   RIFTEstimation< PointXYZI, IntensityGradient, Histogram<32> > desc;
-      //   desc.setInputCloud(keypoint_intensities);
-      //   desc.setSearchSurface(cloud_intensities);
-      //   search::KdTree<PointXYZI>::Ptr kdtree(new search::KdTree<PointXYZI>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setInputGradient(keypoint_gradients);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.setNrDistanceBins(4);
-      //   desc.setNrGradientBins(8);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_SHOT)
-      // {
-      //   // Convert to xyz
-      //   PointCloudXYZ::Ptr cloud_xyz(new PointCloudXYZ);
-      //   copyPointCloud(*cloud, *cloud_xyz);
-      //   PointCloudXYZ::Ptr keypoints_xyz(new PointCloudXYZ);
-      //   copyPointCloud(*keypoints, *keypoints_xyz);
-
-      //   // Estimate features
-      //   SHOTEstimationOMP<PointXYZ, Normal, SHOT352> desc;
-      //   desc.setSearchSurface(cloud_xyz);
-      //   desc.setInputCloud(keypoints_xyz);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_SHOT_COLOR)
-      // {
-      //   SHOTColorEstimationOMP<PointRGB, Normal, SHOT1344> desc;
-      //   desc.setSearchSurface(cloud);
-      //   desc.setInputCloud(keypoints);
-      //   estimateNormals(keypoints, cloud, keypoint_normals);
-      //   desc.setInputNormals(keypoint_normals);
-      //   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-      // else if (desc_type == DESC_SHOT_LRF)
-      // {
-      //   // Convert to xyz
-      //   PointCloudXYZ::Ptr cloud_xyz(new PointCloudXYZ);
-      //   copyPointCloud(*cloud, *cloud_xyz);
-      //   PointCloudXYZ::Ptr keypoints_xyz(new PointCloudXYZ);
-      //   copyPointCloud(*keypoints, *keypoints_xyz);
-
-      //   // Estimate features
-      //   SHOTLocalReferenceFrameEstimationOMP<PointXYZ, SHOT352> desc;
-      //   desc.setSearchSurface(cloud_xyz);
-      //   desc.setInputCloud(keypoints_xyz);
-      //   search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
-      //   desc.setSearchMethod(kdtree);
-      //   desc.setRadiusSearch(0.08);
-      //   desc.compute(*descriptors);
-      // }
-
-      ros::WallTime desc_start = ros::WallTime::now();
+      }
+      else if (desc_type == DESC_ESF)
+      {
+        PointCloud<ESFSignature640>::Ptr features(new PointCloud<ESFSignature640>);
+        Features<ESFSignature640> feat(desc_type);
+      }
+      else if (desc_type == DESC_FPFH)
+      {
+        PointCloud<FPFHSignature33>::Ptr features(new PointCloud<FPFHSignature33>);
+        Features<FPFHSignature33> feat(desc_type);
+      }
+      else if (desc_type == DESC_NARF)
+      {
+        PointCloud<Narf36>::Ptr features(new PointCloud<Narf36>);
+        Features<Narf36> feat(desc_type);
+      }
+      else if (desc_type == DESC_VFH)
+      {
+        PointCloud<VFHSignature308>::Ptr features(new PointCloud<VFHSignature308>);
+        Features<VFHSignature308> feat(desc_type);
+      }
+      else if (desc_type == DESC_CVFH)
+      {
+        PointCloud<VFHSignature308>::Ptr features(new PointCloud<VFHSignature308>);
+        Features<VFHSignature308> feat(desc_type);
+      }
+      else if (desc_type == DESC_PFH)
+      {
+        PointCloud<PFHSignature125>::Ptr features(new PointCloud<PFHSignature125>);
+        Features<PFHSignature125> feat(desc_type);
+      }
+      else if (desc_type == DESC_PPAL_CURV)
+      {
+        PointCloud<PrincipalCurvatures>::Ptr features(new PointCloud<PrincipalCurvatures>);
+        Features<PrincipalCurvatures> feat(desc_type);
+      }
+      else if (desc_type == DESC_RIFT)
+      {
+        PointCloud< Histogram<32> >::Ptr features(new PointCloud< Histogram<32> >);
+        Features< Histogram<32> > feat(desc_type);
+      }
+      else if (desc_type == DESC_SHOT)
+      {
+        PointCloud<SHOT352>::Ptr features(new PointCloud<SHOT352>);
+        Features<SHOT352> feat(desc_type);
+      }
+      else if (desc_type == DESC_SHOT_COLOR)
+      {
+        PointCloud<SHOT1344>::Ptr features(new PointCloud<SHOT1344>);
+        Features<SHOT1344> feat(desc_type);
+      }
+      else if (desc_type == DESC_SHOT_LRF)
+      {
+        PointCloud<SHOT352>::Ptr features(new PointCloud<SHOT352>);
+        Features<SHOT352> feat(desc_type);
+      }
       ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
       ROS_INFO_STREAM("Done! Total cloud points: " << cloud_1_->points.size() <<
