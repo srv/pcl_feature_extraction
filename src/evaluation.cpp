@@ -216,9 +216,9 @@ public:
 
       // Log
       ros::WallDuration kp_runtime = ros::WallTime::now() - kp_start;
-      ROS_INFO_STREAM(".    Number of source keypoints: " << source_keypoints->points.size() <<
-                      ".    Number of target keypoints: " << target_keypoints->points.size() <<
-                      ".    Runtime: " << kp_runtime.toSec() << "\n");
+      ROS_INFO_STREAM(".    Number of source keypoints: " << source_keypoints->points.size());
+      ROS_INFO_STREAM(".    Number of target keypoints: " << target_keypoints->points.size());
+      ROS_INFO_STREAM(".    Runtime: " << kp_runtime.toSec());
 
 
       // Features correspondences
@@ -245,9 +245,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -256,9 +256,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
 
       }
       else if (desc_type == DESC_USC) {}
@@ -284,9 +284,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -295,9 +295,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_FPFH)
       {
@@ -312,9 +312,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -323,9 +323,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_NARF) {}
       else if (desc_type == DESC_VFH)
@@ -341,9 +341,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -352,9 +352,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_CVFH)
       {
@@ -369,9 +369,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -380,9 +380,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_PFH)
       {
@@ -397,9 +397,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -408,9 +408,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_PPAL_CURV)
       {
@@ -425,9 +425,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -436,9 +436,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_RIFT) {}
       else if (desc_type == DESC_SHOT)
@@ -454,9 +454,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -465,9 +465,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_SHOT_COLOR)
       {
@@ -482,9 +482,9 @@ public:
         ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
-                        ".    Number of target features: " << target_features->points.size() <<
-                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM(".    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec());
 
         // Find correspondences
         ros::WallTime corr_start = ros::WallTime::now();
@@ -493,9 +493,9 @@ public:
         ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
         // Log
-        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
-                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
-                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM(".    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM(".    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_SHOT_LRF) {}
 
