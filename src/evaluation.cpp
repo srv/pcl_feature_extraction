@@ -82,7 +82,8 @@ string keypoints_list[] = {KP_HARRIS_3D,
 //                              DESC_SHOT_COLOR,
 //                              DESC_SHOT_LRF};
 
-string descriptors_list[] = {DESC_SHAPE_CONTEXT,
+string descriptors_list[] = {DESC_NARF,
+                             DESC_SHAPE_CONTEXT,
                              DESC_ESF,
                              DESC_FPFH,
                              DESC_VFH,
@@ -275,7 +276,14 @@ public:
       {
         // Compute features
         ros::WallTime desc_start = ros::WallTime::now();
-        Feature<PointXYZRGB, ESFSignature640>::Ptr feature_extractor(new ESFEstimation<PointXYZRGB, ESFSignature640>);
+        ESFEstimation<PointXYZRGB, ESFSignature640>::Ptr feature_extractor_orig(
+          new ESFEstimation<PointXYZRGB, ESFSignature640>);
+
+        // Set properties
+        feature_extractor_orig->setRadiusSearch(feat_radius_search_ / 10.0);
+        feature_extractor_orig->setKSearch(0);
+
+        Feature<PointXYZRGB, ESFSignature640>::Ptr feature_extractor(feature_extractor_orig);
         PointCloud<ESFSignature640>::Ptr source_features(new PointCloud<ESFSignature640>);
         PointCloud<ESFSignature640>::Ptr target_features(new PointCloud<ESFSignature640>);
         Features<ESFSignature640> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
@@ -327,7 +335,51 @@ public:
         ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
         ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
       }
-      else if (desc_type == DESC_NARF) {}
+      else if (desc_type == DESC_NARF) {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
+        PointCloud<Narf36>::Ptr source_features(new PointCloud<Narf36>);
+        PointCloud<Narf36>::Ptr target_features(new PointCloud<Narf36>);
+        RangeImagePlanar source_range_image, target_range_image;
+        Tools::convertToRangeImage(source_cloud_, source_range_image);
+        Tools::convertToRangeImage(target_cloud_, target_range_image);
+
+        // Get the cloud indices
+        vector<int> source_keypoint_indices, target_keypoint_indices;
+        Tools::getIndices(source_cloud_, source_keypoints,
+                          source_keypoint_indices);
+        Tools::getIndices(target_cloud_, target_keypoints,
+                          target_keypoint_indices);
+
+        NarfDescriptor source_feat(&source_range_image, &source_keypoint_indices);
+        NarfDescriptor target_feat(&source_range_image, &target_keypoint_indices);
+
+        source_feat.getParameters().support_size = 0.2f;
+        source_feat.getParameters().rotation_invariant = true;
+        source_feat.compute(*source_features);
+
+        target_feat.getParameters().support_size = 0.2f;
+        target_feat.getParameters().rotation_invariant = true;
+        target_feat.compute(*target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
+
+        // Log
+        ROS_INFO_STREAM("    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM("    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM("    Runtime: " << desc_runtime.toSec());
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        Features<Narf36> feat;
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM("    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
+      }
       else if (desc_type == DESC_VFH)
       {
         // Compute features
@@ -360,7 +412,14 @@ public:
       {
         // Compute features
         ros::WallTime desc_start = ros::WallTime::now();
-        Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(new CVFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
+        CVFHEstimation<PointXYZRGB, Normal, VFHSignature308>::Ptr feature_extractor_orig(
+          new CVFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
+
+        // Set properties
+        feature_extractor_orig->setRadiusSearch(feat_radius_search_ / 10.0);
+        feature_extractor_orig->setKSearch(0);
+
+        Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(feature_extractor_orig);
         PointCloud<VFHSignature308>::Ptr source_features(new PointCloud<VFHSignature308>);
         PointCloud<VFHSignature308>::Ptr target_features(new PointCloud<VFHSignature308>);
         Features<VFHSignature308> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
@@ -440,7 +499,57 @@ public:
         ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
         ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
       }
-      else if (desc_type == DESC_RIFT) {}
+      else if (desc_type == DESC_RIFT) {
+        // // Compute features
+        // ros::WallTime desc_start = ros::WallTime::now();
+
+        // PointCloud<PointXYZI>::Ptr source_cloud_intensities(new PointCloud<PointXYZI>);
+        // PointCloud<PointXYZI>::Ptr target_cloud_intensities(new PointCloud<PointXYZI>);
+        // PointCloud<IntensityGradient>::Ptr source_keypoint_gradients(new PointCloud<IntensityGradient>);
+        // PointCloud<IntensityGradient>::Ptr target_keypoint_gradients(new PointCloud<IntensityGradient>);
+        // Tools::estimateNormals(source_keypoints, *source_keypoint_normals);
+        // Tools::estimateNormals(target_keypoints, *keypointarget_t_normals);
+        // PointCloudXYZRGBtoXYZI(source_keypoints, *source_keypoint_intensities);
+        // PointCloudXYZRGBtoXYZI(target_keypoints, *keypointarget_t_intensities);
+        // PointCloudXYZRGBtoXYZI(source_cloud_, *source_cloud_intensities);
+        // PointCloudXYZRGBtoXYZI(target_cloud_, *cloud_itarget_ntensities);
+        // Tools::computeGradient(source_keypoint_intensities, source_keypoint_normals, *source_keypoint_gradients);
+        // Tools::computeGradient(target_keypoint_intensities, keypointarget_t_normals, *keypoint_gratarget_dients);
+
+        // search::KdTree<PointCloudRGB>::Ptr kdtree(new search::KdTree<PointCloudRGB>);
+        // RIFTEstimation<PointXYZI, IntensityGradient, RIFT32> rift;
+        // rift.setRadiusSearch(0.02);
+        // rift.setNrDistanceBins(4);
+        // rift.setNrGradientBins(8);
+        // rift.setSearchMethod(kdtree);
+
+        // rift.setInputCloud(source_keypoint_intensities);
+        // rift.setSearchSurface(source_cloud_intensities);
+        // rift.setInputGradient(source_keypoint_gradients);
+        // rift.compute(*source_features);
+
+        // rift.setInputCloud(target_keypoint_intensities);
+        // rift.setSearchSurface(target_cloud_intensities);
+        // rift.setInputGradient(target_keypoint_gradients);
+        // rift.compute(*target_features);
+        // ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
+
+        // // Log
+        // ROS_INFO_STREAM("    Number of source features: " << source_features->points.size());
+        // ROS_INFO_STREAM("    Number of target features: " << target_features->points.size());
+        // ROS_INFO_STREAM("    Runtime: " << desc_runtime.toSec());
+
+        // // Find correspondences
+        // ros::WallTime corr_start = ros::WallTime::now();
+        // feat.findCorrespondences(source_features, target_features, correspondences);
+        // feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        // ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // // Log
+        // ROS_INFO_STREAM("    Number of correspondences: " << correspondences->size());
+        // ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
+        // ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
+      }
       else if (desc_type == DESC_SHOT)
       {
         // Compute features

@@ -6,6 +6,8 @@
 #ifndef FEATURES_H
 #define FEATURES_H
 
+#include <pcl_feature_extraction/tools.h>
+
 #include <ros/ros.h>
 #include <vector>
 #include <string>
@@ -105,10 +107,11 @@ class Features
  public:
 
   // Class constructor
-  explicit Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor);
-  explicit Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor,
-                    const double feat_radius_search,
-                    const double normal_radius_search);
+  Features() {}
+  Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor);
+  Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor,
+           const double feat_radius_search,
+           const double normal_radius_search);
 
   // Feature computation
   void compute(const PointCloudRGB::Ptr cloud,
@@ -130,23 +133,7 @@ class Features
   void setFeatureRadiusSearch(double radius_search);
   void setNormalRadiusSearch(double radius_search);
 
- protected:
-
-  // Normal estimation
-  void estimateNormals(const PointCloudRGB::Ptr& cloud,
-                       PointCloud<Normal>::Ptr& normals);
-
-  // Compute the intensity gradients
-  void computeGradient(const PointCloud<PointXYZI>::Ptr& intensity,
-                       const PointCloud<Normal>::Ptr& normals,
-                       PointCloud<IntensityGradient>::Ptr& gradients);
-
-  // Converts a pointcloud to a range image
-  void convertToRangeImage(const PointCloudRGB::Ptr& cloud,
-                           RangeImagePlanar& range_image);
-
  private:
-
   typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor_;
   double feat_radius_search_;
   double normal_radius_search_;
@@ -189,7 +176,7 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr cloud,
   if(feature_from_normals)
   {
     typename PointCloud<Normal>::Ptr normals (new PointCloud<Normal>);
-    estimateNormals(cloud, normals);
+    Tools::estimateNormals(cloud, normals, normal_radius_search_);
     feature_from_normals->setInputNormals(normals);
   }
   feature_extractor_->setSearchSurface(cloud);
@@ -218,70 +205,6 @@ template<typename FeatureType>
 void Features<FeatureType>::setNormalRadiusSearch(double radius_search)
 {
   normal_radius_search_ = radius_search;
-}
-
-/** \brief Normal estimation
-  * @return
-  * \param Cloud where normals will be estimated
-  * \param Cloud surface with additional information to estimate the features for every point in the input dataset
-  * \param Output cloud with normals
-  */
-template<typename FeatureType>
-void Features<FeatureType>::estimateNormals(const PointCloudRGB::Ptr& cloud,
-                                            PointCloud<Normal>::Ptr& normals)
-{
-  NormalEstimation<PointRGB, Normal> normal_estimation;
-  normal_estimation.setInputCloud(cloud);
-  normal_estimation.setRadiusSearch(normal_radius_search_);
-  search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-  normal_estimation.setSearchMethod(kdtree);
-  normal_estimation.compute(*normals);
-}
-
-/** \brief Compute the intensity gradients
-  * @return
-  * \param Input intensity cloud
-  * \param Input cloud with normals
-  * \param Output cloud with gradients
-  */
-template<typename FeatureType>
-void Features<FeatureType>::computeGradient(const PointCloud<PointXYZI>::Ptr& intensity,
-                                            const PointCloud<Normal>::Ptr& normals,
-                                            PointCloud<IntensityGradient>::Ptr& gradients)
-{
-  // Compute the intensity gradients.
-  IntensityGradientEstimation<PointXYZI,
-                              Normal,
-                              IntensityGradient,
-                              common::IntensityFieldAccessor<PointXYZI> > ge;
-  ge.setInputCloud(intensity);
-  ge.setInputNormals(normals);
-  ge.setRadiusSearch(normal_radius_search_);
-  ge.compute(*gradients);
-}
-
-/** \brief Converts a pointcloud to a range image
-  * @return
-  * \param Input cloud
-  * \param Output range image
-  */
-template<typename FeatureType>
-void Features<FeatureType>::convertToRangeImage(const PointCloudRGB::Ptr& cloud,
-                                   RangeImagePlanar& range_image)
-{
-  // Convert the cloud to range image.
-  int image_size_x = 640, image_size_y = 480;
-  float center_x = (640.0f / 2.0f), center_y = (480.0f / 2.0f);
-  float focal_length_x = 525.0f, focal_length_y = focal_length_x;
-  Eigen::Affine3f sensor_pose = Eigen::Affine3f(Eigen::Translation3f(cloud->sensor_origin_[0],
-                 cloud->sensor_origin_[1],
-                 cloud->sensor_origin_[2])) *
-                 Eigen::Affine3f(cloud->sensor_orientation_);
-  float noise_level = 0.0f, minimum_range = 0.0f;
-  range_image.createFromPointCloudWithFixedSize(*cloud, image_size_x, image_size_y,
-      center_x, center_y, focal_length_x, focal_length_x,
-      sensor_pose, RangeImage::CAMERA_FRAME,
-      noise_level, minimum_range);
 }
 
 /** \brief Find correspondences between features
@@ -353,6 +276,5 @@ void Features<FeatureType>::filterCorrespondences(const PointCloudRGB::Ptr sourc
   rejector.setInputCorrespondences(correspondences);
   rejector.getCorrespondences(*filtered_correspondences);
 }
-
 
 #endif  // FEATURES_H
