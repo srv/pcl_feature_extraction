@@ -40,10 +40,18 @@ void stopHandler(int s)
 }
 
 // Define the list of keypoints and descriptors
-string keypoints_list[] = {KP_AGAST_DETECTOR_7_12s,
-                           KP_AGAST_DETECTOR_5_8,
-                           KP_OAST_DETECTOR_9_16,
-                           KP_HARRIS_3D,
+// string keypoints_list[] = {KP_AGAST_DETECTOR_7_12s,
+//                            KP_AGAST_DETECTOR_5_8,
+//                            KP_OAST_DETECTOR_9_16,
+//                            KP_HARRIS_3D,
+//                            KP_HARRIS_6D,
+//                            KP_ISS,
+//                            KP_NARF,
+//                            KP_SIFT,
+//                            KP_SUSAN,
+//                            KP_UNIFORM_SAMPLING};
+
+string keypoints_list[] = {KP_HARRIS_3D,
                            KP_HARRIS_6D,
                            KP_ISS,
                            KP_NARF,
@@ -77,15 +85,12 @@ string keypoints_list[] = {KP_AGAST_DETECTOR_7_12s,
 string descriptors_list[] = {DESC_SHAPE_CONTEXT,
                              DESC_ESF,
                              DESC_FPFH,
-                             DESC_NARF,
                              DESC_VFH,
                              DESC_CVFH,
                              DESC_PFH,
                              DESC_PPAL_CURV,
-                             DESC_RIFT,
                              DESC_SHOT,
-                             DESC_SHOT_COLOR,
-                             DESC_SHOT_LRF};
+                             DESC_SHOT_COLOR};
 
 class PclFeaturesEvaluation
 {
@@ -103,6 +108,10 @@ private:
   // PointClouds
   PointCloudRGB::Ptr cloud_1_;
   PointCloudRGB::Ptr cloud_2_;
+
+  // Common parameters
+  double feat_radius_search_;
+  double normal_radius_search_;
 
   // Keypoints and descriptors combinations
   vector< pair<string,string> > comb_;
@@ -138,6 +147,10 @@ public:
     // Directories
     nhp_.param("cloud_filename_1", cloud_filename_1_, string(""));
     nhp_.param("cloud_filename_2", cloud_filename_2_, string(""));
+
+    // Parameters
+    nhp_.param("feat_radius_search", feat_radius_search_, 0.08);
+    nhp_.param("normal_radius_search", normal_radius_search_, 0.05);
   }
 
   /** \brief Read the PointClouds
@@ -186,120 +199,196 @@ public:
       ROS_INFO_STREAM("Evaluating: " << kp_type << " / " << desc_type);
 
       // Extract the keypoints
-      Keypoints kp(kp_type);
+      Keypoints kp(kp_type, normal_radius_search_);
       ros::WallTime kp_start = ros::WallTime::now();
-      PointCloudRGB::Ptr keypoints(new PointCloudRGB);
-      kp.compute(cloud_1_, keypoints);
+      PointCloudRGB::Ptr keypoints_1(new PointCloudRGB);
+      PointCloudRGB::Ptr keypoints_2(new PointCloudRGB);
+      kp.compute(cloud_1_, keypoints_1);
+      kp.compute(cloud_2_, keypoints_2);
+
+      // Sanity check
+      if (keypoints_1->points.size() == 0 || keypoints_2->points.size() == 0 )
+      {
+        ROS_WARN("No keypoints, skipping...");
+        continue;
+      }
+
+      // Log
       ros::WallDuration kp_runtime = ros::WallTime::now() - kp_start;
+      ROS_INFO_STREAM("Total cloud points: " << cloud_1_->points.size() <<
+                      ".    Number of keypoints: " << keypoints_1->points.size() <<
+                      ".    Runtime: " << kp_runtime.toSec() << "\n");
 
       // Extract the features
       ros::WallTime desc_start = ros::WallTime::now();
       if (desc_type == DESC_SHAPE_CONTEXT)
       {
-        PointCloud<ShapeContext1980>::Ptr features(new PointCloud<ShapeContext1980>);
-        Features<ShapeContext1980> feat(desc_type);
+        ShapeContext3DEstimation<PointXYZRGB, Normal, ShapeContext1980>::Ptr feature_extractor_orig(
+          new ShapeContext3DEstimation<PointXYZRGB, Normal, ShapeContext1980>);
+
+        // Set properties
+        feature_extractor_orig->setMinimalRadius(feat_radius_search_ / 10.0);
+        feature_extractor_orig->setPointDensityRadius(feat_radius_search_ / 5.0);
+
+        // Compute features
+        Feature<PointXYZRGB, ShapeContext1980>::Ptr feature_extractor(feature_extractor_orig);
+        PointCloud<ShapeContext1980>::Ptr features_1(new PointCloud<ShapeContext1980>);
+        PointCloud<ShapeContext1980>::Ptr features_2(new PointCloud<ShapeContext1980>);
+        Features<ShapeContext1980> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_USC)
       {
-
       }
       else if (desc_type == DESC_BOARD)
       {
-
       }
       else if (desc_type == DESC_BOUNDARY)
       {
-
       }
       else if (desc_type == DESC_INT_GRAD)
       {
-
       }
       else if (desc_type == DESC_INT_SPIN)
       {
-
       }
       else if (desc_type == DESC_RIB)
       {
-
       }
       else if (desc_type == DESC_SPIN_IMAGE)
       {
-
       }
       else if (desc_type == DESC_MOMENT_INV)
       {
-
       }
       else if (desc_type == DESC_CRH)
       {
-
       }
       else if (desc_type == DESC_DIFF_OF_NORM)
       {
-
-
       }
       else if (desc_type == DESC_ESF)
       {
-        PointCloud<ESFSignature640>::Ptr features(new PointCloud<ESFSignature640>);
-        Features<ESFSignature640> feat(desc_type);
+        Feature<PointXYZRGB, ESFSignature640>::Ptr feature_extractor(new ESFEstimation<PointXYZRGB, ESFSignature640>);
+        PointCloud<ESFSignature640>::Ptr features_1(new PointCloud<ESFSignature640>);
+        PointCloud<ESFSignature640>::Ptr features_2(new PointCloud<ESFSignature640>);
+        Features<ESFSignature640> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_FPFH)
       {
-        PointCloud<FPFHSignature33>::Ptr features(new PointCloud<FPFHSignature33>);
-        Features<FPFHSignature33> feat(desc_type);
+        Feature<PointXYZRGB, FPFHSignature33>::Ptr feature_extractor(new FPFHEstimation<PointXYZRGB, Normal, FPFHSignature33>);
+        PointCloud<FPFHSignature33>::Ptr features_1(new PointCloud<FPFHSignature33>);
+        PointCloud<FPFHSignature33>::Ptr features_2(new PointCloud<FPFHSignature33>);
+        Features<FPFHSignature33> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_NARF)
       {
-        PointCloud<Narf36>::Ptr features(new PointCloud<Narf36>);
-        Features<Narf36> feat(desc_type);
+        // Feature<PointXYZRGB, Narf36>::Ptr feature_extractor(new NarfDescriptor<PointXYZRGB, Narf36>);
+        // PointCloud<Narf36>::Ptr features_1(new PointCloud<Narf36>);
+        // PointCloud<Narf36>::Ptr features_2(new PointCloud<Narf36>);
+        // Features<Narf36> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        // feat.compute(cloud_1_, keypoints_1, features_1);
+        // feat.compute(cloud_2_, keypoints_2, features_2);
       }
       else if (desc_type == DESC_VFH)
       {
-        PointCloud<VFHSignature308>::Ptr features(new PointCloud<VFHSignature308>);
-        Features<VFHSignature308> feat(desc_type);
+        Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(new VFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr features_1(new PointCloud<VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr features_2(new PointCloud<VFHSignature308>);
+        Features<VFHSignature308> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_CVFH)
       {
-        PointCloud<VFHSignature308>::Ptr features(new PointCloud<VFHSignature308>);
-        Features<VFHSignature308> feat(desc_type);
+        Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(new CVFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr features_1(new PointCloud<VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr features_2(new PointCloud<VFHSignature308>);
+        Features<VFHSignature308> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_PFH)
       {
-        PointCloud<PFHSignature125>::Ptr features(new PointCloud<PFHSignature125>);
-        Features<PFHSignature125> feat(desc_type);
+        Feature<PointXYZRGB, PFHSignature125>::Ptr feature_extractor(new PFHEstimation<PointXYZRGB, Normal, PFHSignature125>);
+        PointCloud<PFHSignature125>::Ptr features_1(new PointCloud<PFHSignature125>);
+        PointCloud<PFHSignature125>::Ptr features_2(new PointCloud<PFHSignature125>);
+        Features<PFHSignature125> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_PPAL_CURV)
       {
-        PointCloud<PrincipalCurvatures>::Ptr features(new PointCloud<PrincipalCurvatures>);
-        Features<PrincipalCurvatures> feat(desc_type);
+        Feature<PointXYZRGB, PrincipalCurvatures>::Ptr feature_extractor(new PrincipalCurvaturesEstimation<PointXYZRGB, Normal, PrincipalCurvatures>);
+        PointCloud<PrincipalCurvatures>::Ptr features_1(new PointCloud<PrincipalCurvatures>);
+        PointCloud<PrincipalCurvatures>::Ptr features_2(new PointCloud<PrincipalCurvatures>);
+        Features<PrincipalCurvatures> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_RIFT)
       {
-        PointCloud< Histogram<32> >::Ptr features(new PointCloud< Histogram<32> >);
-        Features< Histogram<32> > feat(desc_type);
+        // Feature<PointXYZRGB, Histogram<32> >::Ptr feature_extractor(new RIFTEstimation<PointXYZRGB, Normal, Histogram<32> >);
+        // PointCloud< Histogram<32> >::Ptr features_1(new PointCloud< Histogram<32> >);
+        // PointCloud< Histogram<32> >::Ptr features_2(new PointCloud< Histogram<32> >);
+        // Features< Histogram<32> > feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        // feat.compute(cloud_1_, keypoints_1, features_1);
+        // feat.compute(cloud_2_, keypoints_2, features_2);
       }
       else if (desc_type == DESC_SHOT)
       {
-        PointCloud<SHOT352>::Ptr features(new PointCloud<SHOT352>);
-        Features<SHOT352> feat(desc_type);
+        Feature<PointXYZRGB, SHOT352>::Ptr feature_extractor(new SHOTEstimationOMP<PointXYZRGB, Normal, SHOT352>);
+        PointCloud<SHOT352>::Ptr features_1(new PointCloud<SHOT352>);
+        PointCloud<SHOT352>::Ptr features_2(new PointCloud<SHOT352>);
+        Features<SHOT352> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_SHOT_COLOR)
       {
-        PointCloud<SHOT1344>::Ptr features(new PointCloud<SHOT1344>);
-        Features<SHOT1344> feat(desc_type);
+        Feature<PointXYZRGB, SHOT1344>::Ptr feature_extractor(new SHOTColorEstimationOMP<PointXYZRGB, Normal, SHOT1344>);
+        PointCloud<SHOT1344>::Ptr features_1(new PointCloud<SHOT1344>);
+        PointCloud<SHOT1344>::Ptr features_2(new PointCloud<SHOT1344>);
+        Features<SHOT1344> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        feat.compute(cloud_1_, keypoints_1, features_1);
+        feat.compute(cloud_2_, keypoints_2, features_2);
+
+        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
       }
       else if (desc_type == DESC_SHOT_LRF)
       {
-        PointCloud<SHOT352>::Ptr features(new PointCloud<SHOT352>);
-        Features<SHOT352> feat(desc_type);
+        // Feature<PointXYZRGB, SHOT352>::Ptr feature_extractor(new SHOTLocalReferenceFrameEstimationOMP<PointXYZRGB, SHOT352>);
+        // PointCloud<SHOT352>::Ptr features_1(new PointCloud<SHOT352>);
+        // PointCloud<SHOT352>::Ptr features_2(new PointCloud<SHOT352>);
+        // Features<SHOT352> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+        // feat.compute(cloud_1_, keypoints_1, features_1);
+        // feat.compute(cloud_2_, keypoints_2, features_2);
       }
-      ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-      ROS_INFO_STREAM("Done! Total cloud points: " << cloud_1_->points.size() <<
-                      ".    Number of keypoints: " << keypoints->points.size() <<
-                      ".    Runtime: " << kp_runtime.toSec() << "\n");
+      ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
+      ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec() << "\n");
+
     }
   }
 

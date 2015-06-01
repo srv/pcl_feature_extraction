@@ -22,11 +22,13 @@ catkin_package()
 
 include_directories(include
                     ${catkin_INCLUDE_DIRS}
-										${eigen_INCLUDE_DIRS})
+										${eigen_INCLUDE_DIRS}
+                    ${PCL_INCLUDE_DIRS})
 
 # Localization node
 add_executable(pcl_feature_extraction
 						   src/evaluation.cpp)
 target_link_libraries(pcl_feature_extraction
 						${eigen_LIBRARIES}
+            ${PCL_LIBRARIES}
 						${catkin_LIBRARIES})

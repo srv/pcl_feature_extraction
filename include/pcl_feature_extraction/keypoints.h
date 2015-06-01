@@ -58,6 +58,7 @@ public:
 
   // Constructor
   explicit Keypoints(const string kp_type);
+  explicit Keypoints(const string kp_type, double normal_radius_search);
 
   // Detect
   void compute(const PointCloudRGB::Ptr& cloud, PointCloudRGB::Ptr& cloud_keypoints);
@@ -78,16 +79,19 @@ public:
 
 private:
 
-  string kp_type_;  //!> Stores the keypoint type
+  string kp_type_;               //!> Stores the keypoint type
+  double normal_radius_search_;  //!> Normal radius search
 
 };
 
 /** \brief Class constructor. Initialize the class
   */
-Keypoints::Keypoints(const string kp_type)
+Keypoints::Keypoints(const string kp_type) : kp_type_(kp_type)
 {
-  kp_type_ = kp_type;
+  normal_radius_search_ = 0.05;
 }
+Keypoints::Keypoints(const string kp_type, const double normal_radius_search) :
+  kp_type_(kp_type), normal_radius_search_(normal_radius_search) {}
 
 
 /** \brief Detects the keypoints of the input cloud
@@ -274,7 +278,7 @@ void Keypoints::compute(const PointCloudRGB::Ptr& cloud, PointCloudRGB::Ptr& clo
 
     PointCloud<int>::Ptr keypoints(new PointCloud<int>);
     UniformSampling<PointRGB> uniform;
-    uniform.setRadiusSearch(0.05);
+    uniform.setRadiusSearch(normal_radius_search_);
     uniform.setInputCloud(cloud);
     uniform.compute(*keypoints);
 
@@ -300,7 +304,7 @@ void Keypoints::normals(const PointCloudRGB::Ptr& cloud, PointCloud<PointNormal>
 
   ne.setInputCloud(cloud);
   ne.setSearchMethod(tree_n);
-  ne.setRadiusSearch(0.05);
+  ne.setRadiusSearch(normal_radius_search_);
   ne.compute(*cloud_normals);
 
   // Copy the xyz info from input cloud and add it to cloud_normals as the xyz field in PointNormals estimation is zero

@@ -45,7 +45,7 @@
 
 using namespace std;
 using namespace pcl;
-using namespace pcl::registration;
+using namespace registration;
 
 ///  Types of 3D features:
 ///  - Shape Context 3D (SC)
@@ -105,7 +105,10 @@ class Features
  public:
 
   // Class constructor
-  explicit Features(const string desc_type);
+  explicit Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor);
+  explicit Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor,
+                    const double feat_radius_search,
+                    const double normal_radius_search);
 
   // Feature computation
   void compute(const PointCloudRGB::Ptr& cloud,
@@ -123,11 +126,14 @@ class Features
                              CorrespondencesPtr correspondences,
                              CorrespondencesPtr filtered_correspondences);
 
+  // Set common feature properties
+  void setFeatureRadiusSearch(double radius_search);
+  void setNormalRadiusSearch(double radius_search);
+
  protected:
 
   // Normal estimation
   void estimateNormals(const PointCloudRGB::Ptr& cloud,
-                       const PointCloudRGB::Ptr& surface,
                        PointCloud<Normal>::Ptr& normals);
 
   // Compute the intensity gradients
@@ -141,15 +147,28 @@ class Features
 
  private:
 
-  string desc_type_;  //!> Stores the keypoint type
+  typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor_;
+  double feat_radius_search_;
+  double normal_radius_search_;
 };
 
 
 /** \brief Class constructor. Initialize the class
   */
 template<typename FeatureType>
-Features<FeatureType>::Features(const string desc_type)
-  : desc_type_(desc_type) {}
+Features<FeatureType>::Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor)
+  : feature_extractor_(feature_extractor)
+{
+  feat_radius_search_ = 0.08;
+  normal_radius_search_ = 0.05;
+}
+  template<typename FeatureType>
+Features<FeatureType>::Features(typename Feature<PointXYZRGB, FeatureType>::Ptr feature_extractor,
+                                const double feat_radius_search,
+                                const double normal_radius_search) :
+    feature_extractor_(feature_extractor),
+    feat_radius_search_(feat_radius_search),
+    normal_radius_search_(normal_radius_search) {}
 
 
 /** \brief Compute descriptors
@@ -163,238 +182,42 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
                                     const PointCloudRGB::Ptr& keypoints,
                                     typename PointCloud<FeatureType>::Ptr& descriptors)
 {
-  // Normals are required for many features
-  PointCloud<Normal>::Ptr keypoint_normals(new PointCloud<Normal>);
 
-  if (desc_type_ == DESC_SHAPE_CONTEXT)
-  {
-    PointCloud<ShapeContext1980>::Ptr features(new PointCloud<ShapeContext1980>);
-    ShapeContext3DEstimation<PointRGB, Normal, ShapeContext1980> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.05);
-    desc.setMinimalRadius(0.05 / 10.0);
-    desc.setPointDensityRadius(0.05 / 5.0);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_USC)
-  {
+  typename FeatureFromNormals<PointXYZRGB, Normal, FeatureType>::Ptr feature_from_normals =
+    boost::dynamic_pointer_cast<FeatureFromNormals<PointXYZRGB, Normal, FeatureType> >(feature_extractor_);
 
-  }
-  else if (desc_type_ == DESC_BOARD)
+  if(feature_from_normals)
   {
+    typename PointCloud<Normal>::Ptr normals (new PointCloud<Normal>);
+    estimateNormals(cloud, normals);
+    feature_from_normals->setInputNormals(normals);
+  }
+  feature_extractor_->setSearchSurface(cloud);
+  feature_extractor_->setInputCloud(keypoints);
+  search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
+  feature_extractor_->setSearchMethod(kdtree);
+  feature_extractor_->setRadiusSearch(feat_radius_search_);
+  feature_extractor_->compute(*descriptors);
+}
 
-  }
-  else if (desc_type_ == DESC_BOUNDARY)
-  {
+/** \brief Sets the feature radius search
+  * @return
+  * \param Radius search
+  */
+template<typename FeatureType>
+void Features<FeatureType>::setFeatureRadiusSearch(double radius_search)
+{
+  feat_radius_search_ = radius_search;
+}
 
-  }
-  else if (desc_type_ == DESC_INT_GRAD)
-  {
-
-  }
-  else if (desc_type_ == DESC_INT_SPIN)
-  {
-
-  }
-  else if (desc_type_ == DESC_RIB)
-  {
-
-  }
-  else if (desc_type_ == DESC_SPIN_IMAGE)
-  {
-
-  }
-  else if (desc_type_ == DESC_MOMENT_INV)
-  {
-
-  }
-  else if (desc_type_ == DESC_CRH)
-  {
-
-  }
-  else if (desc_type_ == DESC_DIFF_OF_NORM)
-  {
-
-
-  }
-  else if (desc_type_ == DESC_ESF)
-  {
-    PointCloud<ESFSignature640>::Ptr features(new PointCloud<ESFSignature640>);
-    ESFEstimation<PointRGB, ESFSignature640> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_FPFH)
-  {
-    PointCloud<FPFHSignature33>::Ptr features(new PointCloud<FPFHSignature33>);
-    FPFHEstimation<PointRGB, Normal, FPFHSignature33> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_NARF)
-  {
-    PointCloud<Narf36>::Ptr features(new PointCloud<Narf36>);
-    PointCloud<Narf36>::Ptr descriptors(new PointCloud<Narf36>);
-    RangeImagePlanar range_image;
-    convertToRangeImage(cloud, range_image);
-    NarfDescriptor desc(&range_image, &keypoints);
-    desc.getParameters().support_size = 0.2f;
-    desc.getParameters().rotation_invariant = true;
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_VFH)
-  {
-    PointCloud<VFHSignature308>::Ptr features(new PointCloud<VFHSignature308>);
-    VFHEstimation<PointRGB, Normal, VFHSignature308> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_CVFH)
-  {
-    PointCloud<VFHSignature308>::Ptr features(new PointCloud<VFHSignature308>);
-    CVFHEstimation<PointRGB, Normal, VFHSignature308> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_PFH)
-  {
-    PointCloud<PFHSignature125>::Ptr features(new PointCloud<PFHSignature125>);
-    PFHEstimation<PointRGB, Normal, PFHSignature125> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_PPAL_CURV)
-  {
-    // Convert to xyz
-    PointCloudXYZ::Ptr cloud_xyz(new PointCloudXYZ);
-    copyPointCloud(*cloud, *cloud_xyz);
-    PointCloudXYZ::Ptr keypoints_xyz(new PointCloudXYZ);
-    copyPointCloud(*keypoints, *keypoints_xyz);
-
-    // Estimate features
-    PointCloud<PrincipalCurvatures>::Ptr features(new PointCloud<PrincipalCurvatures>);
-    PrincipalCurvaturesEstimation<PointXYZ, Normal, PrincipalCurvatures> desc;
-    desc.setSearchSurface(cloud_xyz);
-    desc.setInputCloud(keypoints_xyz);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_RIFT)
-  {
-    // Compute gradients
-    PointCloud<PointXYZI>::Ptr keypoint_intensities(new PointCloud<PointXYZI>);
-    PointCloud<PointXYZI>::Ptr cloud_intensities(new PointCloud<PointXYZI>);
-    PointCloud<IntensityGradient>::Ptr keypoint_gradients(new PointCloud<IntensityGradient>);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    PointCloudXYZRGBtoXYZI(*keypoints, *keypoint_intensities);
-    PointCloudXYZRGBtoXYZI(*cloud, *cloud_intensities);
-    computeGradient(keypoint_intensities, keypoint_normals, keypoint_gradients);
-
-    // Estimate features
-    PointCloud< Histogram<32> >::Ptr features(new PointCloud< Histogram<32> >);
-    RIFTEstimation< PointXYZI, IntensityGradient, Histogram<32> > desc;
-    desc.setInputCloud(keypoint_intensities);
-    desc.setSearchSurface(cloud_intensities);
-    search::KdTree<PointXYZI>::Ptr kdtree(new search::KdTree<PointXYZI>);
-    desc.setSearchMethod(kdtree);
-    desc.setInputGradient(keypoint_gradients);
-    desc.setRadiusSearch(0.08);
-    desc.setNrDistanceBins(4);
-    desc.setNrGradientBins(8);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_SHOT)
-  {
-    // Convert to xyz
-    PointCloudXYZ::Ptr cloud_xyz(new PointCloudXYZ);
-    copyPointCloud(*cloud, *cloud_xyz);
-    PointCloudXYZ::Ptr keypoints_xyz(new PointCloudXYZ);
-    copyPointCloud(*keypoints, *keypoints_xyz);
-
-    // Estimate features
-    PointCloud<SHOT352>::Ptr features(new PointCloud<SHOT352>);
-    SHOTEstimationOMP<PointXYZ, Normal, SHOT352> desc;
-    desc.setSearchSurface(cloud_xyz);
-    desc.setInputCloud(keypoints_xyz);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_SHOT_COLOR)
-  {
-    PointCloud<SHOT1344>::Ptr features(new PointCloud<SHOT1344>);
-    SHOTColorEstimationOMP<PointRGB, Normal, SHOT1344> desc;
-    desc.setSearchSurface(cloud);
-    desc.setInputCloud(keypoints);
-    estimateNormals(keypoints, cloud, keypoint_normals);
-    desc.setInputNormals(keypoint_normals);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else if (desc_type_ == DESC_SHOT_LRF)
-  {
-    // Convert to xyz
-    PointCloudXYZ::Ptr cloud_xyz(new PointCloudXYZ);
-    copyPointCloud(*cloud, *cloud_xyz);
-    PointCloudXYZ::Ptr keypoints_xyz(new PointCloudXYZ);
-    copyPointCloud(*keypoints, *keypoints_xyz);
-
-    // Estimate features
-    PointCloud<SHOT352>::Ptr features(new PointCloud<SHOT352>);
-    SHOTLocalReferenceFrameEstimationOMP<PointXYZ, SHOT352> desc;
-    desc.setSearchSurface(cloud_xyz);
-    desc.setInputCloud(keypoints_xyz);
-    search::KdTree<PointXYZ>::Ptr kdtree(new search::KdTree<PointXYZ>);
-    desc.setSearchMethod(kdtree);
-    desc.setRadiusSearch(0.08);
-    desc.compute(*features);
-  }
-  else
-  {
-    ROS_WARN("Descriptor type unavailable");
-  }
+/** \brief Sets the normals radius search
+  * @return
+  * \param Radius search
+  */
+template<typename FeatureType>
+void Features<FeatureType>::setNormalRadiusSearch(double radius_search)
+{
+  normal_radius_search_ = radius_search;
 }
 
 /** \brief Normal estimation
@@ -405,16 +228,14 @@ void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
   */
 template<typename FeatureType>
 void Features<FeatureType>::estimateNormals(const PointCloudRGB::Ptr& cloud,
-                                            const PointCloudRGB::Ptr& surface,
                                             PointCloud<Normal>::Ptr& normals)
 {
-  NormalEstimation<PointRGB, Normal> normalEstimation;
-  normalEstimation.setInputCloud(cloud);
-  normalEstimation.setSearchSurface(surface);
-  normalEstimation.setRadiusSearch(0.05);
+  NormalEstimation<PointRGB, Normal> normal_estimation;
+  normal_estimation.setInputCloud(cloud);
+  normal_estimation.setRadiusSearch(normal_radius_search_);
   search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-  normalEstimation.setSearchMethod(kdtree);
-  normalEstimation.compute(*normals);
+  normal_estimation.setSearchMethod(kdtree);
+  normal_estimation.compute(*normals);
 }
 
 /** \brief Compute the intensity gradients
@@ -435,7 +256,7 @@ void Features<FeatureType>::computeGradient(const PointCloud<PointXYZI>::Ptr& in
                               common::IntensityFieldAccessor<PointXYZI> > ge;
   ge.setInputCloud(intensity);
   ge.setInputNormals(normals);
-  ge.setRadiusSearch(0.08);
+  ge.setRadiusSearch(normal_radius_search_);
   ge.compute(*gradients);
 }
 
