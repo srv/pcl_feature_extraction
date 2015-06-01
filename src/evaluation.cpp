@@ -217,7 +217,7 @@ public:
       // Log
       ros::WallDuration kp_runtime = ros::WallTime::now() - kp_start;
       ROS_INFO_STREAM(".    Number of source keypoints: " << source_keypoints->points.size() <<
-                      ".    Number of target keypoints: " << source_keypoints->points.size() <<
+                      ".    Number of target keypoints: " << target_keypoints->points.size() <<
                       ".    Runtime: " << kp_runtime.toSec() << "\n");
 
 
