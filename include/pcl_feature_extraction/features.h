@@ -111,20 +111,20 @@ class Features
                     const double normal_radius_search);
 
   // Feature computation
-  void compute(const PointCloudRGB::Ptr& cloud,
-               const PointCloudRGB::Ptr& keypoints,
+  void compute(const PointCloudRGB::Ptr cloud,
+               const PointCloudRGB::Ptr keypoints,
                typename PointCloud<FeatureType>::Ptr& descriptors);
 
   // Search for correspondences
   void findCorrespondences(typename PointCloud<FeatureType>::Ptr source,
                            typename PointCloud<FeatureType>::Ptr target,
-                           CorrespondencesPtr correspondences);
+                           CorrespondencesPtr& correspondences);
 
   // Correspondence filtering
-  void filterCorrespondences(typename PointCloud<FeatureType>::Ptr source,
-                             typename PointCloud<FeatureType>::Ptr target,
-                             CorrespondencesPtr correspondences,
-                             CorrespondencesPtr filtered_correspondences);
+  void filterCorrespondences(const PointCloudRGB::Ptr source,
+                             const PointCloudRGB::Ptr target,
+                             const CorrespondencesPtr correspondences,
+                             CorrespondencesPtr& filtered_correspondences);
 
   // Set common feature properties
   void setFeatureRadiusSearch(double radius_search);
@@ -178,8 +178,8 @@ Features<FeatureType>::Features(typename Feature<PointXYZRGB, FeatureType>::Ptr 
   * \param Output descriptors
   */
 template<typename FeatureType>
-void Features<FeatureType>::compute(const PointCloudRGB::Ptr& cloud,
-                                    const PointCloudRGB::Ptr& keypoints,
+void Features<FeatureType>::compute(const PointCloudRGB::Ptr cloud,
+                                    const PointCloudRGB::Ptr keypoints,
                                     typename PointCloud<FeatureType>::Ptr& descriptors)
 {
 
@@ -293,10 +293,10 @@ void Features<FeatureType>::convertToRangeImage(const PointCloudRGB::Ptr& cloud,
 template<typename FeatureType>
 void Features<FeatureType>::findCorrespondences(typename PointCloud<FeatureType>::Ptr source,
                                                 typename PointCloud<FeatureType>::Ptr target,
-                                                CorrespondencesPtr correspondences)
+                                                CorrespondencesPtr& correspondences)
 {
-  vector<int>& source2target;
-  vector<int>& target2source;
+  vector<int> source2target;
+  vector<int> target2source;
   const int k = 1;
   vector<int> k_indices(k);
   vector<float> k_dist(k);
@@ -342,14 +342,14 @@ void Features<FeatureType>::findCorrespondences(typename PointCloud<FeatureType>
   * \param Output filtered vector of correspondences
   */
 template<typename FeatureType>
-void Features<FeatureType>::filterCorrespondences(typename PointCloud<FeatureType>::Ptr source,
-                                                  typename PointCloud<FeatureType>::Ptr target,
+void Features<FeatureType>::filterCorrespondences(const PointCloudRGB::Ptr source,
+                                                  const PointCloudRGB::Ptr target,
                                                   CorrespondencesPtr correspondences,
-                                                  CorrespondencesPtr filtered_correspondences)
+                                                  CorrespondencesPtr& filtered_correspondences)
 {
-  registration::CorrespondenceRejectorSampleConsensus<PointXYZI> rejector;
-  rejector.setInputCloud(source);
-  rejector.setTargetCloud(target);
+  registration::CorrespondenceRejectorSampleConsensus<PointRGB> rejector;
+  rejector.setInputSource(source);
+  rejector.setInputTarget(target);
   rejector.setInputCorrespondences(correspondences);
   rejector.getCorrespondences(*filtered_correspondences);
 }

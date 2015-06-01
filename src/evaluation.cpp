@@ -102,12 +102,12 @@ private:
   ros::NodeHandle nhp_;
 
   // PointCloud files
-  string cloud_filename_1_;
-  string cloud_filename_2_;
+  string source_filename;
+  string target_filename;
 
   // PointClouds
-  PointCloudRGB::Ptr cloud_1_;
-  PointCloudRGB::Ptr cloud_2_;
+  PointCloudRGB::Ptr source_cloud_;
+  PointCloudRGB::Ptr target_cloud_;
 
   // Common parameters
   double feat_radius_search_;
@@ -116,12 +116,11 @@ private:
   // Keypoints and descriptors combinations
   vector< pair<string,string> > comb_;
 
-
 public:
 
   /** \brief Class constructor
     */
-  PclFeaturesEvaluation() : nh_(), nhp_("~"), cloud_1_(new PointCloudRGB), cloud_2_(new PointCloudRGB)
+  PclFeaturesEvaluation() : nh_(), nhp_("~"), source_cloud_(new PointCloudRGB), target_cloud_(new PointCloudRGB)
   {
     // Bind the finalize member to stopHandler signal
     stopHandlerCb = std::bind1st(std::mem_fun(&PclFeaturesEvaluation::finalize), this);
@@ -145,8 +144,8 @@ public:
   void readParameters()
   {
     // Directories
-    nhp_.param("cloud_filename_1", cloud_filename_1_, string(""));
-    nhp_.param("cloud_filename_2", cloud_filename_2_, string(""));
+    nhp_.param("cloud_filename_1", source_filename, string(""));
+    nhp_.param("cloud_filename_2", target_filename, string(""));
 
     // Parameters
     nhp_.param("feat_radius_search", feat_radius_search_, 0.08);
@@ -157,14 +156,14 @@ public:
     */
   void readClouds()
   {
-    if (pcl::io::loadPCDFile<PointRGB>(cloud_filename_1_, *cloud_1_) == -1)
+    if (pcl::io::loadPCDFile<PointRGB>(source_filename, *source_cloud_) == -1)
     {
-      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << cloud_filename_1_);
+      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << source_filename);
       return;
     }
-    if (pcl::io::loadPCDFile<PointRGB>(cloud_filename_2_, *cloud_2_) == -1)
+    if (pcl::io::loadPCDFile<PointRGB>(target_filename, *target_cloud_) == -1)
     {
-      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << cloud_filename_2_);
+      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << target_filename);
       return;
     }
   }
@@ -197,17 +196,19 @@ public:
 
       ROS_INFO("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#");
       ROS_INFO_STREAM("Evaluating: " << kp_type << " / " << desc_type);
+      ROS_INFO_STREAM("Total source points: " << source_cloud_->points.size());
+      ROS_INFO_STREAM("Total target points: " << target_cloud_->points.size());
 
       // Extract the keypoints
       Keypoints kp(kp_type, normal_radius_search_);
       ros::WallTime kp_start = ros::WallTime::now();
-      PointCloudRGB::Ptr keypoints_1(new PointCloudRGB);
-      PointCloudRGB::Ptr keypoints_2(new PointCloudRGB);
-      kp.compute(cloud_1_, keypoints_1);
-      kp.compute(cloud_2_, keypoints_2);
+      PointCloudRGB::Ptr source_keypoints(new PointCloudRGB);
+      PointCloudRGB::Ptr target_keypoints(new PointCloudRGB);
+      kp.compute(source_cloud_, source_keypoints);
+      kp.compute(target_cloud_, target_keypoints);
 
       // Sanity check
-      if (keypoints_1->points.size() == 0 || keypoints_2->points.size() == 0 )
+      if (source_keypoints->points.size() == 0 || target_keypoints->points.size() == 0 )
       {
         ROS_WARN("No keypoints, skipping...");
         continue;
@@ -215,14 +216,19 @@ public:
 
       // Log
       ros::WallDuration kp_runtime = ros::WallTime::now() - kp_start;
-      ROS_INFO_STREAM("Total cloud points: " << cloud_1_->points.size() <<
-                      ".    Number of keypoints: " << keypoints_1->points.size() <<
+      ROS_INFO_STREAM(".    Number of source keypoints: " << source_keypoints->points.size() <<
+                      ".    Number of target keypoints: " << source_keypoints->points.size() <<
                       ".    Runtime: " << kp_runtime.toSec() << "\n");
 
+
+      // Features correspondences
+      CorrespondencesPtr correspondences, filtered_correspondences;
+
       // Extract the features
-      ros::WallTime desc_start = ros::WallTime::now();
       if (desc_type == DESC_SHAPE_CONTEXT)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         ShapeContext3DEstimation<PointXYZRGB, Normal, ShapeContext1980>::Ptr feature_extractor_orig(
           new ShapeContext3DEstimation<PointXYZRGB, Normal, ShapeContext1980>);
 
@@ -230,164 +236,268 @@ public:
         feature_extractor_orig->setMinimalRadius(feat_radius_search_ / 10.0);
         feature_extractor_orig->setPointDensityRadius(feat_radius_search_ / 5.0);
 
-        // Compute features
         Feature<PointXYZRGB, ShapeContext1980>::Ptr feature_extractor(feature_extractor_orig);
-        PointCloud<ShapeContext1980>::Ptr features_1(new PointCloud<ShapeContext1980>);
-        PointCloud<ShapeContext1980>::Ptr features_2(new PointCloud<ShapeContext1980>);
+        PointCloud<ShapeContext1980>::Ptr source_features(new PointCloud<ShapeContext1980>);
+        PointCloud<ShapeContext1980>::Ptr target_features(new PointCloud<ShapeContext1980>);
         Features<ShapeContext1980> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+
       }
-      else if (desc_type == DESC_USC)
-      {
-      }
-      else if (desc_type == DESC_BOARD)
-      {
-      }
-      else if (desc_type == DESC_BOUNDARY)
-      {
-      }
-      else if (desc_type == DESC_INT_GRAD)
-      {
-      }
-      else if (desc_type == DESC_INT_SPIN)
-      {
-      }
-      else if (desc_type == DESC_RIB)
-      {
-      }
-      else if (desc_type == DESC_SPIN_IMAGE)
-      {
-      }
-      else if (desc_type == DESC_MOMENT_INV)
-      {
-      }
-      else if (desc_type == DESC_CRH)
-      {
-      }
-      else if (desc_type == DESC_DIFF_OF_NORM)
-      {
-      }
+      else if (desc_type == DESC_USC) {}
+      else if (desc_type == DESC_BOARD) {}
+      else if (desc_type == DESC_BOUNDARY) {}
+      else if (desc_type == DESC_INT_GRAD) {}
+      else if (desc_type == DESC_INT_SPIN) {}
+      else if (desc_type == DESC_RIB) {}
+      else if (desc_type == DESC_SPIN_IMAGE) {}
+      else if (desc_type == DESC_MOMENT_INV) {}
+      else if (desc_type == DESC_CRH) {}
+      else if (desc_type == DESC_DIFF_OF_NORM) {}
       else if (desc_type == DESC_ESF)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, ESFSignature640>::Ptr feature_extractor(new ESFEstimation<PointXYZRGB, ESFSignature640>);
-        PointCloud<ESFSignature640>::Ptr features_1(new PointCloud<ESFSignature640>);
-        PointCloud<ESFSignature640>::Ptr features_2(new PointCloud<ESFSignature640>);
+        PointCloud<ESFSignature640>::Ptr source_features(new PointCloud<ESFSignature640>);
+        PointCloud<ESFSignature640>::Ptr target_features(new PointCloud<ESFSignature640>);
         Features<ESFSignature640> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
       else if (desc_type == DESC_FPFH)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, FPFHSignature33>::Ptr feature_extractor(new FPFHEstimation<PointXYZRGB, Normal, FPFHSignature33>);
-        PointCloud<FPFHSignature33>::Ptr features_1(new PointCloud<FPFHSignature33>);
-        PointCloud<FPFHSignature33>::Ptr features_2(new PointCloud<FPFHSignature33>);
+        PointCloud<FPFHSignature33>::Ptr source_features(new PointCloud<FPFHSignature33>);
+        PointCloud<FPFHSignature33>::Ptr target_features(new PointCloud<FPFHSignature33>);
         Features<FPFHSignature33> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
-      else if (desc_type == DESC_NARF)
-      {
-        // Feature<PointXYZRGB, Narf36>::Ptr feature_extractor(new NarfDescriptor<PointXYZRGB, Narf36>);
-        // PointCloud<Narf36>::Ptr features_1(new PointCloud<Narf36>);
-        // PointCloud<Narf36>::Ptr features_2(new PointCloud<Narf36>);
-        // Features<Narf36> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        // feat.compute(cloud_1_, keypoints_1, features_1);
-        // feat.compute(cloud_2_, keypoints_2, features_2);
-      }
+      else if (desc_type == DESC_NARF) {}
       else if (desc_type == DESC_VFH)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(new VFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
-        PointCloud<VFHSignature308>::Ptr features_1(new PointCloud<VFHSignature308>);
-        PointCloud<VFHSignature308>::Ptr features_2(new PointCloud<VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr source_features(new PointCloud<VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr target_features(new PointCloud<VFHSignature308>);
         Features<VFHSignature308> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
       else if (desc_type == DESC_CVFH)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(new CVFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
-        PointCloud<VFHSignature308>::Ptr features_1(new PointCloud<VFHSignature308>);
-        PointCloud<VFHSignature308>::Ptr features_2(new PointCloud<VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr source_features(new PointCloud<VFHSignature308>);
+        PointCloud<VFHSignature308>::Ptr target_features(new PointCloud<VFHSignature308>);
         Features<VFHSignature308> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
       else if (desc_type == DESC_PFH)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, PFHSignature125>::Ptr feature_extractor(new PFHEstimation<PointXYZRGB, Normal, PFHSignature125>);
-        PointCloud<PFHSignature125>::Ptr features_1(new PointCloud<PFHSignature125>);
-        PointCloud<PFHSignature125>::Ptr features_2(new PointCloud<PFHSignature125>);
+        PointCloud<PFHSignature125>::Ptr source_features(new PointCloud<PFHSignature125>);
+        PointCloud<PFHSignature125>::Ptr target_features(new PointCloud<PFHSignature125>);
         Features<PFHSignature125> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
       else if (desc_type == DESC_PPAL_CURV)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, PrincipalCurvatures>::Ptr feature_extractor(new PrincipalCurvaturesEstimation<PointXYZRGB, Normal, PrincipalCurvatures>);
-        PointCloud<PrincipalCurvatures>::Ptr features_1(new PointCloud<PrincipalCurvatures>);
-        PointCloud<PrincipalCurvatures>::Ptr features_2(new PointCloud<PrincipalCurvatures>);
+        PointCloud<PrincipalCurvatures>::Ptr source_features(new PointCloud<PrincipalCurvatures>);
+        PointCloud<PrincipalCurvatures>::Ptr target_features(new PointCloud<PrincipalCurvatures>);
         Features<PrincipalCurvatures> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
-      else if (desc_type == DESC_RIFT)
-      {
-        // Feature<PointXYZRGB, Histogram<32> >::Ptr feature_extractor(new RIFTEstimation<PointXYZRGB, Normal, Histogram<32> >);
-        // PointCloud< Histogram<32> >::Ptr features_1(new PointCloud< Histogram<32> >);
-        // PointCloud< Histogram<32> >::Ptr features_2(new PointCloud< Histogram<32> >);
-        // Features< Histogram<32> > feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        // feat.compute(cloud_1_, keypoints_1, features_1);
-        // feat.compute(cloud_2_, keypoints_2, features_2);
-      }
+      else if (desc_type == DESC_RIFT) {}
       else if (desc_type == DESC_SHOT)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, SHOT352>::Ptr feature_extractor(new SHOTEstimationOMP<PointXYZRGB, Normal, SHOT352>);
-        PointCloud<SHOT352>::Ptr features_1(new PointCloud<SHOT352>);
-        PointCloud<SHOT352>::Ptr features_2(new PointCloud<SHOT352>);
+        PointCloud<SHOT352>::Ptr source_features(new PointCloud<SHOT352>);
+        PointCloud<SHOT352>::Ptr target_features(new PointCloud<SHOT352>);
         Features<SHOT352> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
+
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
       }
       else if (desc_type == DESC_SHOT_COLOR)
       {
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
         Feature<PointXYZRGB, SHOT1344>::Ptr feature_extractor(new SHOTColorEstimationOMP<PointXYZRGB, Normal, SHOT1344>);
-        PointCloud<SHOT1344>::Ptr features_1(new PointCloud<SHOT1344>);
-        PointCloud<SHOT1344>::Ptr features_2(new PointCloud<SHOT1344>);
+        PointCloud<SHOT1344>::Ptr source_features(new PointCloud<SHOT1344>);
+        PointCloud<SHOT1344>::Ptr target_features(new PointCloud<SHOT1344>);
         Features<SHOT1344> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(cloud_1_, keypoints_1, features_1);
-        feat.compute(cloud_2_, keypoints_2, features_2);
+        feat.compute(source_cloud_, source_keypoints, source_features);
+        feat.compute(target_cloud_, target_keypoints, target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        ROS_INFO_STREAM(".    Number of features: " << features_1->points.size());
-      }
-      else if (desc_type == DESC_SHOT_LRF)
-      {
-        // Feature<PointXYZRGB, SHOT352>::Ptr feature_extractor(new SHOTLocalReferenceFrameEstimationOMP<PointXYZRGB, SHOT352>);
-        // PointCloud<SHOT352>::Ptr features_1(new PointCloud<SHOT352>);
-        // PointCloud<SHOT352>::Ptr features_2(new PointCloud<SHOT352>);
-        // Features<SHOT352> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        // feat.compute(cloud_1_, keypoints_1, features_1);
-        // feat.compute(cloud_2_, keypoints_2, features_2);
-      }
+        // Log
+        ROS_INFO_STREAM(".    Number of source features: " << source_features->points.size() <<
+                        ".    Number of target features: " << target_features->points.size() <<
+                        ".    Runtime: " << desc_runtime.toSec() << "\n");
 
-      ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
-      ROS_INFO_STREAM(".    Runtime: " << desc_runtime.toSec() << "\n");
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+
+        // Log
+        ROS_INFO_STREAM(".    Number of correspondences: " << correspondences->size() <<
+                        ".    Number of filtered correspondences: " << filtered_correspondences->size() <<
+                        ".    Runtime: " << corr_runtime.toSec() << "\n");
+      }
+      else if (desc_type == DESC_SHOT_LRF) {}
 
     }
   }
