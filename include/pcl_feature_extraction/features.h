@@ -19,6 +19,7 @@
 #include <pcl/range_image/range_image_planar.h>
 #include <pcl/registration/correspondence_rejection_sample_consensus.h>
 #include <pcl/point_types_conversion.h>
+#include <pcl/kdtree/impl/kdtree_flann.hpp>
 
 // pcl features
 #include <pcl_feature_extraction/features.h>

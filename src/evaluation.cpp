@@ -82,7 +82,8 @@ string keypoints_list[] = {KP_HARRIS_3D,
 //                              DESC_SHOT_COLOR,
 //                              DESC_SHOT_LRF};
 
-string descriptors_list[] = {DESC_NARF,
+string descriptors_list[] = {DESC_RIFT,
+                             DESC_NARF,
                              DESC_SHAPE_CONTEXT,
                              DESC_ESF,
                              DESC_FPFH,
@@ -500,55 +501,62 @@ public:
         ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_RIFT) {
-        // // Compute features
-        // ros::WallTime desc_start = ros::WallTime::now();
+        // Compute features
+        ros::WallTime desc_start = ros::WallTime::now();
 
-        // PointCloud<PointXYZI>::Ptr source_cloud_intensities(new PointCloud<PointXYZI>);
-        // PointCloud<PointXYZI>::Ptr target_cloud_intensities(new PointCloud<PointXYZI>);
-        // PointCloud<IntensityGradient>::Ptr source_keypoint_gradients(new PointCloud<IntensityGradient>);
-        // PointCloud<IntensityGradient>::Ptr target_keypoint_gradients(new PointCloud<IntensityGradient>);
-        // Tools::estimateNormals(source_keypoints, *source_keypoint_normals);
-        // Tools::estimateNormals(target_keypoints, *keypointarget_t_normals);
-        // PointCloudXYZRGBtoXYZI(source_keypoints, *source_keypoint_intensities);
-        // PointCloudXYZRGBtoXYZI(target_keypoints, *keypointarget_t_intensities);
-        // PointCloudXYZRGBtoXYZI(source_cloud_, *source_cloud_intensities);
-        // PointCloudXYZRGBtoXYZI(target_cloud_, *cloud_itarget_ntensities);
-        // Tools::computeGradient(source_keypoint_intensities, source_keypoint_normals, *source_keypoint_gradients);
-        // Tools::computeGradient(target_keypoint_intensities, keypointarget_t_normals, *keypoint_gratarget_dients);
+        PointCloud<pcl::Histogram<32> >::Ptr source_features(new PointCloud<pcl::Histogram<32> >);
+        PointCloud<pcl::Histogram<32> >::Ptr target_features(new PointCloud<pcl::Histogram<32> >);
+        PointCloud<PointXYZI>::Ptr source_intensities(new PointCloud<PointXYZI>);
+        PointCloud<PointXYZI>::Ptr source_keypoint_intensities(new PointCloud<PointXYZI>);
+        PointCloud<PointXYZI>::Ptr target_intensities(new PointCloud<PointXYZI>);
+        PointCloud<PointXYZI>::Ptr target_keypoint_intensities(new PointCloud<PointXYZI>);
+        PointCloud<IntensityGradient>::Ptr source_gradients(new PointCloud<IntensityGradient>);
+        PointCloud<IntensityGradient>::Ptr target_gradients(new PointCloud<IntensityGradient>);
+        PointCloud<Normal>::Ptr source_normals(new PointCloud<Normal>);
+        PointCloud<Normal>::Ptr target_normals(new PointCloud<Normal>);
+        Tools::estimateNormals(source_cloud_, source_normals, normal_radius_search_);
+        Tools::estimateNormals(target_cloud_, target_normals, normal_radius_search_);
+        PointCloudXYZRGBtoXYZI(*source_keypoints, *source_keypoint_intensities);
+        PointCloudXYZRGBtoXYZI(*target_keypoints, *target_keypoint_intensities);
+        PointCloudXYZRGBtoXYZI(*source_cloud_, *source_intensities);
+        PointCloudXYZRGBtoXYZI(*target_cloud_, *target_intensities);
+        Tools::computeGradient(source_intensities, source_normals, source_gradients, normal_radius_search_);
+        Tools::computeGradient(target_intensities, target_normals, target_gradients, normal_radius_search_);
 
         // search::KdTree<PointCloudRGB>::Ptr kdtree(new search::KdTree<PointCloudRGB>);
-        // RIFTEstimation<PointXYZI, IntensityGradient, RIFT32> rift;
-        // rift.setRadiusSearch(0.02);
-        // rift.setNrDistanceBins(4);
-        // rift.setNrGradientBins(8);
+        RIFTEstimation<PointXYZI, IntensityGradient, pcl::Histogram<32> > rift;
+        rift.setRadiusSearch(feat_radius_search_);
+        rift.setNrDistanceBins(4);
+        rift.setNrGradientBins(8);
         // rift.setSearchMethod(kdtree);
 
-        // rift.setInputCloud(source_keypoint_intensities);
-        // rift.setSearchSurface(source_cloud_intensities);
-        // rift.setInputGradient(source_keypoint_gradients);
-        // rift.compute(*source_features);
+        rift.setInputCloud(source_keypoint_intensities);
+        rift.setSearchSurface(source_intensities);
+        rift.setInputGradient(source_gradients);
+        rift.compute(*source_features);
 
-        // rift.setInputCloud(target_keypoint_intensities);
-        // rift.setSearchSurface(target_cloud_intensities);
-        // rift.setInputGradient(target_keypoint_gradients);
-        // rift.compute(*target_features);
-        // ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
+        rift.setInputCloud(target_keypoint_intensities);
+        rift.setSearchSurface(target_intensities);
+        rift.setInputGradient(target_gradients);
+        rift.compute(*target_features);
+        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
 
-        // // Log
-        // ROS_INFO_STREAM("    Number of source features: " << source_features->points.size());
-        // ROS_INFO_STREAM("    Number of target features: " << target_features->points.size());
-        // ROS_INFO_STREAM("    Runtime: " << desc_runtime.toSec());
+        // Log
+        ROS_INFO_STREAM("    Number of source features: " << source_features->points.size());
+        ROS_INFO_STREAM("    Number of target features: " << target_features->points.size());
+        ROS_INFO_STREAM("    Runtime: " << desc_runtime.toSec());
 
-        // // Find correspondences
-        // ros::WallTime corr_start = ros::WallTime::now();
-        // feat.findCorrespondences(source_features, target_features, correspondences);
-        // feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
-        // ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
+        // Find correspondences
+        ros::WallTime corr_start = ros::WallTime::now();
+        Features<pcl::Histogram<32> > feat;
+        feat.findCorrespondences(source_features, target_features, correspondences);
+        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
+        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
 
-        // // Log
-        // ROS_INFO_STREAM("    Number of correspondences: " << correspondences->size());
-        // ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
-        // ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
+        // Log
+        ROS_INFO_STREAM("    Number of correspondences: " << correspondences->size());
+        ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
+        ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
       }
       else if (desc_type == DESC_SHOT)
       {
