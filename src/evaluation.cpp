@@ -582,6 +582,7 @@ public:
       ROS_INFO_STREAM("    Correspondences runtime: " << corr_runtime.toSec());
       ROS_INFO_STREAM("    Total runtime: " << kp_runtime.toSec()+desc_runtime.toSec()+corr_runtime.toSec());
       ROS_INFO_STREAM("    TF: " << matrix4fToString(ransac_tf));
+      ROS_INFO_STREAM("    Distance to ICP: " << diff(icp_tf, ransac_tf));
 
       // Save
       fstream f_output(output_file_.c_str(), ios::out | ios::app);
