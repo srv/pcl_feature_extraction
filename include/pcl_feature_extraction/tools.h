@@ -77,7 +77,7 @@ class Tools {
   }
 
   static bool areEqual(const PointRGB& p, const PointRGB& q) {
-    return (abs(p.x - q.x) < 0.001) && (abs(p.y - q.y) < 0.001) && (abs(p.z - q.z) < 0.001);
+    return (abs(p.x - q.x) < 0.0001) && (abs(p.y - q.y) < 0.0001) && (abs(p.z - q.z) < 0.0001);
   }
 
   /**
