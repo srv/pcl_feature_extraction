@@ -100,8 +100,10 @@ private:
   ros::NodeHandle nhp_;
 
   // PointCloud files
-  string source_filename;
-  string target_filename;
+  string source_filename_;
+  string target_filename_;
+  string source_tf_filename_;
+  string target_tf_filename_;
 
   // Working directory
   string work_dir_;
@@ -112,6 +114,8 @@ private:
   // PointClouds
   PointCloudRGB::Ptr source_cloud_;
   PointCloudRGB::Ptr target_cloud_;
+  Eigen::Matrix4f source_pose_;
+  Eigen::Matrix4f target_pose_;
 
   // Common parameters
   double feat_radius_search_;
@@ -149,8 +153,10 @@ public:
   {
     // Directories
     nhp_.param("work_dir",              work_dir_,              string(""));
-    nhp_.param("cloud_filename_1",      source_filename,        string(""));
-    nhp_.param("cloud_filename_2",      target_filename,        string(""));
+    nhp_.param("source_filename",       source_filename_,       string(""));
+    nhp_.param("target_filename",       target_filename_,       string(""));
+    nhp_.param("source_tf_filename",    source_tf_filename_,    string(""));
+    nhp_.param("target_tf_filename",    target_tf_filename_,    string(""));
 
     // Parameters
     nhp_.param("feat_radius_search",    feat_radius_search_,    0.08);
@@ -211,16 +217,21 @@ public:
     */
   void readClouds()
   {
-    if (pcl::io::loadPCDFile<PointRGB>(source_filename, *source_cloud_) == -1)
+    // pcd
+    if (pcl::io::loadPCDFile<PointRGB>(source_filename_, *source_cloud_) == -1)
     {
-      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << source_filename);
+      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << source_filename_);
       return;
     }
-    if (pcl::io::loadPCDFile<PointRGB>(target_filename, *target_cloud_) == -1)
+    if (pcl::io::loadPCDFile<PointRGB>(target_filename_, *target_cloud_) == -1)
     {
-      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << target_filename);
+      ROS_WARN_STREAM("[PclFeaturesEvaluation:] Couldn't read the file: " << target_filename_);
       return;
     }
+
+    // Poses
+    source_pose_ = readPose(source_tf_filename_);
+    target_pose_ = readPose(target_tf_filename_);
   }
 
   /** \brief Creates a list keypoint/descriptor combinations
@@ -274,8 +285,6 @@ public:
 
       ROS_INFO("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#");
       ROS_INFO_STREAM("Evaluating: " << kp_type << " / " << desc_type);
-      ROS_INFO_STREAM("Total source points: " << source_cloud_->points.size());
-      ROS_INFO_STREAM("Total target points: " << target_cloud_->points.size());
 
       // Extract the keypoints
       Keypoints kp(kp_type, normal_radius_search_);
@@ -653,6 +662,49 @@ public:
   double diff(Eigen::Matrix4f in1, Eigen::Matrix4f in2)
   {
     return sqrt( (in1(0,3)-in2(0,3))*(in1(0,3)-in2(0,3)) + (in1(1,3)-in2(1,3))*(in1(1,3)-in2(1,3)) + (in1(2,3)-in2(2,3))*(in1(2,3)-in2(2,3)) );
+  }
+
+  /** \brief Read the pose from file
+    * @return Matrix4f
+    * \param Input pose file
+    */
+  Eigen::Matrix4f readPose(string pose_file)
+  {
+    ifstream file(pose_file.c_str());
+    string line;
+    getline(file, line);
+    int i = 0;
+    string cloud_name, value;
+    double x, y, z, qx, qy, qz, qw;
+    istringstream ss(line);
+    while(getline(ss, value, ','))
+    {
+      if (i == 0)
+        x = lexical_cast<double>(value);
+      else if (i == 1)
+        y = lexical_cast<double>(value);
+      else if (i == 2)
+        z = lexical_cast<double>(value);
+      else if (i == 3)
+        qx = lexical_cast<double>(value);
+      else if (i == 4)
+        qy = lexical_cast<double>(value);
+      else if (i == 5)
+        qz = lexical_cast<double>(value);
+      else if (i == 6)
+        qw = lexical_cast<double>(value);
+      i++;
+    }
+
+    // Build the tf
+    Eigen::Quaternionf q(qx, qy, qz, qw);
+    Eigen::Matrix3f rot = q.toRotationMatrix();
+    Eigen::Matrix4f out;
+    out << rot(0,0), rot(0,1), rot(0,2), x,
+           rot(1,0), rot(1,1), rot(1,2), y,
+           rot(2,0), rot(2,1), rot(2,2), z,
+           0,        0,        0,        1;
+    return out;
   }
 
 };

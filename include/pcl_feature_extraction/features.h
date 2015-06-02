@@ -277,8 +277,8 @@ void Features<FeatureType>::filterCorrespondences(const PointCloudRGB::Ptr sourc
   rejector.setInputSource(source);
   rejector.setInputTarget(target);
   rejector.setInputCorrespondences(correspondences);
-  rejector.setInlierThreshold(0.01);
-  rejector.setMaximumIterations(5000);
+  rejector.setInlierThreshold(0.015);
+  rejector.setMaximumIterations(1000);
   rejector.getCorrespondences(*filtered_correspondences);
   transformation = rejector.getBestTransformation();
 }

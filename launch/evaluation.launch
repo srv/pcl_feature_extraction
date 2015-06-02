@@ -2,10 +2,12 @@
 
   <node pkg="pcl_feature_extraction" type="pcl_feature_extraction" name="evaluation" output="screen">
 
-    <param name="cloud_filename_1" value="$(find pcl_feature_extraction)/data/underwater/source.pcd" />
-    <param name="cloud_filename_2" value="$(find pcl_feature_extraction)/data/underwater/target.pcd" />
-
     <param name="work_dir" value="$(find pcl_feature_extraction)/data" />
+
+    <param name="source_filename" value="$(find pcl_feature_extraction)/data/underwater/source.pcd" />
+    <param name="target_filename" value="$(find pcl_feature_extraction)/data/underwater/target.pcd" />
+    <param name="source_tf_filename" value="$(find pcl_feature_extraction)/data/underwater/source_tf.txt" />
+    <param name="target_tf_filename" value="$(find pcl_feature_extraction)/data/underwater/target_tf.txt" />
 
   </node>
 
