@@ -95,7 +95,7 @@ static const string DESC_PFH           = "PFH";
 static const string DESC_PPAL_CURV     = "PrincipalCurvatures";
 static const string DESC_RIFT          = "RIFT";
 static const string DESC_SHOT          = "SHOT";
-static const string DESC_SHOT_COLOR    = "SHOTColore";
+static const string DESC_SHOT_COLOR    = "SHOTColor";
 static const string DESC_SHOT_LRF      = "SHOTLocalReferenceFrame";
 
 typedef PointXYZRGB PointRGB;

@@ -73,7 +73,6 @@ string keypoints_list[] = {KP_HARRIS_3D,
 //                              DESC_ESF,
 //                              DESC_FPFH,
 //                              DESC_NARF,
-//                              DESC_VFH,
 //                              DESC_CVFH,
 //                              DESC_PFH,
 //                              DESC_PPAL_CURV,
@@ -87,7 +86,6 @@ string descriptors_list[] = {DESC_RIFT,
                              DESC_SHAPE_CONTEXT,
                              DESC_ESF,
                              DESC_FPFH,
-                             DESC_VFH,
                              DESC_CVFH,
                              DESC_PFH,
                              DESC_PPAL_CURV,
@@ -281,7 +279,7 @@ public:
           new ESFEstimation<PointXYZRGB, ESFSignature640>);
 
         // Set properties
-        feature_extractor_orig->setRadiusSearch(feat_radius_search_ / 10.0);
+        feature_extractor_orig->setRadiusSearch(feat_radius_search_);
         feature_extractor_orig->setKSearch(0);
 
         Feature<PointXYZRGB, ESFSignature640>::Ptr feature_extractor(feature_extractor_orig);
@@ -381,34 +379,6 @@ public:
         ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
         ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
       }
-      else if (desc_type == DESC_VFH)
-      {
-        // Compute features
-        ros::WallTime desc_start = ros::WallTime::now();
-        Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(new VFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
-        PointCloud<VFHSignature308>::Ptr source_features(new PointCloud<VFHSignature308>);
-        PointCloud<VFHSignature308>::Ptr target_features(new PointCloud<VFHSignature308>);
-        Features<VFHSignature308> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
-        feat.compute(source_cloud_, source_keypoints, source_features);
-        feat.compute(target_cloud_, target_keypoints, target_features);
-        ros::WallDuration desc_runtime = ros::WallTime::now() - desc_start;
-
-        // Log
-        ROS_INFO_STREAM("    Number of source features: " << source_features->points.size());
-        ROS_INFO_STREAM("    Number of target features: " << target_features->points.size());
-        ROS_INFO_STREAM("    Runtime: " << desc_runtime.toSec());
-
-        // Find correspondences
-        ros::WallTime corr_start = ros::WallTime::now();
-        feat.findCorrespondences(source_features, target_features, correspondences);
-        feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences);
-        ros::WallDuration corr_runtime = ros::WallTime::now() - corr_start;
-
-        // Log
-        ROS_INFO_STREAM("    Number of correspondences: " << correspondences->size());
-        ROS_INFO_STREAM("    Number of filtered correspondences: " << filtered_correspondences->size());
-        ROS_INFO_STREAM("    Runtime: " << corr_runtime.toSec());
-      }
       else if (desc_type == DESC_CVFH)
       {
         // Compute features
@@ -417,7 +387,7 @@ public:
           new CVFHEstimation<PointXYZRGB, Normal, VFHSignature308>);
 
         // Set properties
-        feature_extractor_orig->setRadiusSearch(feat_radius_search_ / 10.0);
+        feature_extractor_orig->setRadiusSearch(feat_radius_search_);
         feature_extractor_orig->setKSearch(0);
 
         Feature<PointXYZRGB, VFHSignature308>::Ptr feature_extractor(feature_extractor_orig);
