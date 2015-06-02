@@ -282,7 +282,7 @@ public:
       string kp_type = comb_[i].first;
       string desc_type = comb_[i].second;
 
-      ROS_INFO("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#");
+      ROS_INFO_STREAM("#-#-#-#-#-#-#-#-#-#-#-# ( " << i+1 << "/" << comb_.size() << " ) #-#-#-#-#-#-#-#-#-#-#-#-#-#");
       ROS_INFO_STREAM("Evaluating: " << kp_type << " / " << desc_type);
 
       // Extract the keypoints
