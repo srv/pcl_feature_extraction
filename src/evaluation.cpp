@@ -54,7 +54,6 @@ void stopHandler(int s)
 string keypoints_list[] = {KP_HARRIS_3D,
                            KP_HARRIS_6D,
                            KP_ISS,
-                           KP_NARF,
                            KP_SIFT,
                            KP_SUSAN,
                            KP_UNIFORM_SAMPLING};
