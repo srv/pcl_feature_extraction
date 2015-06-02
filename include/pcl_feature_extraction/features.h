@@ -128,7 +128,8 @@ class Features
   void filterCorrespondences(const PointCloudRGB::Ptr source,
                              const PointCloudRGB::Ptr target,
                              const CorrespondencesPtr correspondences,
-                             CorrespondencesPtr& filtered_correspondences);
+                             CorrespondencesPtr& filtered_correspondences,
+                             Eigen::Matrix4f& transformation);
 
   // Set common feature properties
   void setFeatureRadiusSearch(double radius_search);
@@ -269,13 +270,17 @@ template<typename FeatureType>
 void Features<FeatureType>::filterCorrespondences(const PointCloudRGB::Ptr source,
                                                   const PointCloudRGB::Ptr target,
                                                   CorrespondencesPtr correspondences,
-                                                  CorrespondencesPtr& filtered_correspondences)
+                                                  CorrespondencesPtr& filtered_correspondences,
+                                                  Eigen::Matrix4f& transformation)
 {
   registration::CorrespondenceRejectorSampleConsensus<PointRGB> rejector;
   rejector.setInputSource(source);
   rejector.setInputTarget(target);
   rejector.setInputCorrespondences(correspondences);
+  rejector.setInlierThreshold(0.01);
+  rejector.setMaximumIterations(5000);
   rejector.getCorrespondences(*filtered_correspondences);
+  transformation = rejector.getBestTransformation();
 }
 
 #endif  // FEATURES_H

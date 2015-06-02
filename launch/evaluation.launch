@@ -5,6 +5,8 @@
     <param name="cloud_filename_1" value="$(find pcl_feature_extraction)/data/underwater/source.pcd" />
     <param name="cloud_filename_2" value="$(find pcl_feature_extraction)/data/underwater/target.pcd" />
 
+    <param name="work_dir" value="$(find pcl_feature_extraction)/data" />
+
   </node>
 
 </launch>
