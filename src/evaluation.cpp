@@ -186,11 +186,13 @@ public:
                 " Descritor name," <<
                 " Source keypoints size," <<
                 " Target keypoints size," <<
+                " Icp keypoints distance," <<
+                " Icp keypoints runtime," <<
                 " Source features size," <<
                 " Target features size," <<
                 " Correspondences," <<
                 " Filtered correspondences," <<
-                " Transformation," <<
+                //" Transformation," <<
                 " Icp distance," <<
                 " Keypoints runtime," <<
                 " Features runtime," <<
@@ -300,6 +302,12 @@ public:
         ROS_WARN("No keypoints, skipping...");
         continue;
       }
+
+      // Icp over the keypoints
+      Eigen::Matrix4f icp_kp_tf;
+      ros::WallTime icp_kp_start = ros::WallTime::now();
+      icpAlign(source_keypoints, target_keypoints, icp_kp_tf, score, convergence);
+      ros::WallDuration icp_kp_runtime = ros::WallTime::now() - icp_kp_start;
 
       // Common variables
       ros::WallDuration desc_runtime, corr_runtime;
@@ -573,6 +581,8 @@ public:
       ROS_INFO_STREAM("    Number of source keypoints: " << source_keypoints->points.size());
       ROS_INFO_STREAM("    Number of target keypoints: " << target_keypoints->points.size());
       ROS_INFO_STREAM("    Keypoints runtime: " << kp_runtime.toSec());
+      ROS_INFO_STREAM("    Icp keypoints distance: " << diff(icp_tf, icp_kp_tf));
+      ROS_INFO_STREAM("    Icp keypoints runtime: " << icp_kp_runtime.toSec());
       ROS_INFO_STREAM("    Number of source features: " << source_feat_size);
       ROS_INFO_STREAM("    Number of target features: " << target_feat_size);
       ROS_INFO_STREAM("    Features runtime: " << desc_runtime.toSec());
@@ -589,11 +599,13 @@ public:
                   desc_type << ", " <<
                   source_keypoints->points.size() << ", " <<
                   target_keypoints->points.size() << ", " <<
+                  diff(icp_tf, icp_kp_tf) << ", " <<
+                  icp_kp_runtime.toSec() << ", " <<
                   source_feat_size << ", " <<
                   target_feat_size << ", " <<
                   correspondences->size() << ", " <<
                   filtered_correspondences->size() << ", " <<
-                  "(" << matrix4fToString(ransac_tf) << "), " <<
+                  //"(" << matrix4fToString(ransac_tf) << "), " <<
                   diff(icp_tf, ransac_tf) << ", " <<
                   kp_runtime.toSec() << ", " <<
                   desc_runtime.toSec() << ", " <<
@@ -643,12 +655,12 @@ public:
   string matrix4fToString(Eigen::Matrix4f in)
   {
     // Translation
-    string out = lexical_cast<string>(in(0,3)) + ", " + lexical_cast<string>(in(1,3)) + ", " + lexical_cast<string>(in(2,3)) + ", ";
+    string out = lexical_cast<string>(in(0,3)) + " | " + lexical_cast<string>(in(1,3)) + " | " + lexical_cast<string>(in(2,3)) + " | ";
 
     // Get the rotation matrix
     Eigen::Matrix3f r = in.block<3,3>(0,0);
     Eigen::Quaternionf q(r);
-    out += lexical_cast<string>(q.x()) + ", " + lexical_cast<string>(q.y()) + ", " + lexical_cast<string>(q.z()) + ", " + lexical_cast<string>(q.w());
+    out += lexical_cast<string>(q.x()) + " | " + lexical_cast<string>(q.y()) + " | " + lexical_cast<string>(q.z()) + " | " + lexical_cast<string>(q.w());
 
     // Exit
     return out;
