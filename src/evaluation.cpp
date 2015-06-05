@@ -82,9 +82,7 @@ string keypoints_list[] = {KP_HARRIS_3D,
 string descriptors_list[] = {DESC_RIFT,
                              DESC_NARF,
                              DESC_SHAPE_CONTEXT,
-                             DESC_FPFH,
                              DESC_CVFH,
-                             DESC_PFH,
                              DESC_PPAL_CURV,
                              DESC_SHOT,
                              DESC_SHOT_COLOR};
@@ -603,6 +601,8 @@ public:
                     corr_runtime.toSec() << ", " <<
                     kp_runtime.toSec() + desc_runtime.toSec() + corr_runtime.toSec() << endl;
         f_output.close();
+
+        counter++;
       }
     }
   }
