@@ -11,6 +11,7 @@
 #include <ros/ros.h>
 #include <vector>
 #include <string>
+#include <boost/thread.hpp>
 
 // Generic pcl
 #include <pcl/common/common.h>
@@ -124,6 +125,11 @@ class Features
                            typename PointCloud<FeatureType>::Ptr target,
                            CorrespondencesPtr& correspondences);
 
+  // Get one direction correspondences
+  void getCorrespondences(typename PointCloud<FeatureType>::Ptr source,
+                          typename PointCloud<FeatureType>::Ptr target,
+                          vector<int>& source2target);
+
   // Correspondence filtering
   void filterCorrespondences(const PointCloudRGB::Ptr source,
                              const PointCloudRGB::Ptr target,
@@ -222,28 +228,13 @@ void Features<FeatureType>::findCorrespondences(typename PointCloud<FeatureType>
 {
   vector<int> source2target;
   vector<int> target2source;
-  const int k = 1;
-  vector<int> k_indices(k);
-  vector<float> k_dist(k);
-  KdTreeFLANN<FeatureType> descriptor_kdtree;
 
-  // Find the index of the best match for each keypoint
-  // From source to target
-  descriptor_kdtree.setInputCloud(target);
-  source2target.resize(source->size());
-  for (size_t i = 0; i < source->size(); ++i)
-  {
-    descriptor_kdtree.nearestKSearch(*source, i, k, k_indices, k_dist);
-    source2target[i] = k_indices[0];
-  }
-  // and from target to source
-  descriptor_kdtree.setInputCloud(source);
-  target2source.resize(target->size());
-  for (size_t i = 0; i < target->size(); ++i)
-  {
-    descriptor_kdtree.nearestKSearch(*target, i, k, k_indices, k_dist);
-    target2source[i] = k_indices[0];
-  }
+  boost::thread thread1(&Features::getCorrespondences, this, boost::ref(source), boost::ref(target), boost::ref(source2target));
+  boost::thread thread2(&Features::getCorrespondences, this, boost::ref(target), boost::ref(source), boost::ref(target2source));
+
+  // Wait until both threads have finished
+  thread1.join();
+  thread2.join();
 
   // now populate the correspondences vector
   vector<pair<unsigned, unsigned> > c;
@@ -256,6 +247,28 @@ void Features<FeatureType>::findCorrespondences(typename PointCloud<FeatureType>
   {
     (*correspondences)[c_idx].index_query = c[c_idx].first;
     (*correspondences)[c_idx].index_match = c[c_idx].second;
+  }
+}
+
+template<typename FeatureType>
+void Features<FeatureType>::getCorrespondences(typename PointCloud<FeatureType>::Ptr source,
+                                               typename PointCloud<FeatureType>::Ptr target,
+                                               vector<int>& source2target)
+{
+  const int k = 1;
+  vector<int> k_indices(k);
+  vector<float> k_dist(k);
+  source2target.clear();
+  KdTreeFLANN<FeatureType> descriptor_kdtree;
+
+  // Find the index of the best match for each keypoint
+  // From source to target
+  descriptor_kdtree.setInputCloud(target);
+  source2target.resize(source->size());
+  for (size_t i = 0; i < source->size(); ++i)
+  {
+    descriptor_kdtree.nearestKSearch(*source, i, k, k_indices, k_dist);
+    source2target[i] = k_indices[0];
   }
 }
 
