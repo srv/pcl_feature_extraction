@@ -16,6 +16,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/registration/icp.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/registration/correspondence_estimation.h>
 
 using namespace pcl;
 using namespace std;
@@ -51,12 +52,16 @@ void stopHandler(int s)
 //                            KP_SUSAN,
 //                            KP_UNIFORM_SAMPLING};
 
+// string keypoints_list[] = {KP_HARRIS_3D,
+//                            KP_HARRIS_6D,
+//                            KP_ISS,
+//                            KP_SIFT,
+//                            KP_SUSAN,
+//                            KP_UNIFORM_SAMPLING};
+
 string keypoints_list[] = {KP_HARRIS_3D,
                            KP_HARRIS_6D,
-                           KP_ISS,
-                           KP_SIFT,
-                           KP_SUSAN,
-                           KP_UNIFORM_SAMPLING};
+                           KP_ISS};
 
 // string descriptors_list[] = {DESC_SHAPE_CONTEXT,
 //                              DESC_USC,
@@ -79,13 +84,15 @@ string keypoints_list[] = {KP_HARRIS_3D,
 //                              DESC_SHOT_COLOR,
 //                              DESC_SHOT_LRF};
 
-string descriptors_list[] = {DESC_RIFT,
-                             DESC_NARF,
-                             DESC_SHAPE_CONTEXT,
-                             DESC_CVFH,
-                             DESC_PPAL_CURV,
-                             DESC_SHOT,
-                             DESC_SHOT_COLOR};
+// string descriptors_list[] = {DESC_RIFT,
+//                              DESC_NARF,
+//                              DESC_SHAPE_CONTEXT,
+//                              DESC_CVFH,
+//                              DESC_PPAL_CURV,
+//                              DESC_SHOT,
+//                              DESC_SHOT_COLOR};
+
+string descriptors_list[] = {DESC_SHOT_COLOR};
 
 class PclFeaturesEvaluation
 {
@@ -554,8 +561,26 @@ public:
 
           // Find correspondences
           ros::WallTime corr_start = ros::WallTime::now();
+          ros::WallTime a = ros::WallTime::now();
           feat.findCorrespondences(source_features, target_features, correspondences);
-          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          ros::WallDuration b = ros::WallTime::now() - a;
+
+
+          ros::WallTime ks = ros::WallTime::now();
+          CorrespondencesPtr correspondences2(new Correspondences);
+          registration::CorrespondenceEstimation<SHOT1344, SHOT1344> corr_est;
+          corr_est.setInputSource(source_features);
+          corr_est.setInputTarget(target_features);
+          corr_est.determineCorrespondences(*correspondences2);
+          ros::WallDuration ke = ros::WallTime::now() - ks;
+
+
+
+          ros::WallTime c = ros::WallTime::now();
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences2, filtered_correspondences, ransac_tf);
+          ros::WallDuration d = ros::WallTime::now() - c;
+          ROS_INFO_STREAM("KKKK: " << b.toSec()  << " | " << ke.toSec() << " | " << d.toSec());
+          ROS_INFO_STREAM("SIZEEEEEEE: " << correspondences2->size());
           corr_runtime = ros::WallTime::now() - corr_start;
         }
         else if (desc_type == DESC_SHOT_LRF) {}
