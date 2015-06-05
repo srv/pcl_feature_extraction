@@ -561,26 +561,11 @@ public:
 
           // Find correspondences
           ros::WallTime corr_start = ros::WallTime::now();
-          ros::WallTime a = ros::WallTime::now();
-          feat.findCorrespondences(source_features, target_features, correspondences);
-          ros::WallDuration b = ros::WallTime::now() - a;
-
-
-          ros::WallTime ks = ros::WallTime::now();
-          CorrespondencesPtr correspondences2(new Correspondences);
           registration::CorrespondenceEstimation<SHOT1344, SHOT1344> corr_est;
           corr_est.setInputSource(source_features);
           corr_est.setInputTarget(target_features);
-          corr_est.determineCorrespondences(*correspondences2);
-          ros::WallDuration ke = ros::WallTime::now() - ks;
-
-
-
-          ros::WallTime c = ros::WallTime::now();
-          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences2, filtered_correspondences, ransac_tf);
-          ros::WallDuration d = ros::WallTime::now() - c;
-          ROS_INFO_STREAM("KKKK: " << b.toSec()  << " | " << ke.toSec() << " | " << d.toSec());
-          ROS_INFO_STREAM("SIZEEEEEEE: " << correspondences2->size());
+          corr_est.determineReciprocalCorrespondences(*correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
           corr_runtime = ros::WallTime::now() - corr_start;
         }
         else if (desc_type == DESC_SHOT_LRF) {}
