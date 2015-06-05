@@ -79,17 +79,15 @@ string keypoints_list[] = {KP_HARRIS_3D,
 //                              DESC_SHOT_COLOR,
 //                              DESC_SHOT_LRF};
 
-// string descriptors_list[] = {DESC_RIFT,
-//                              DESC_NARF,
-//                              DESC_SHAPE_CONTEXT,
-//                              DESC_FPFH,
-//                              DESC_CVFH,
-//                              DESC_PFH,
-//                              DESC_PPAL_CURV,
-//                              DESC_SHOT,
-//                              DESC_SHOT_COLOR};
-
-string descriptors_list[] = {DESC_SHOT_COLOR};
+string descriptors_list[] = {DESC_RIFT,
+                             DESC_NARF,
+                             DESC_SHAPE_CONTEXT,
+                             DESC_FPFH,
+                             DESC_CVFH,
+                             DESC_PFH,
+                             DESC_PPAL_CURV,
+                             DESC_SHOT,
+                             DESC_SHOT_COLOR};
 
 class PclFeaturesEvaluation
 {
@@ -544,15 +542,9 @@ public:
         }
         else if (desc_type == DESC_SHOT_COLOR)
         {
-          SHOTColorEstimationOMP<PointXYZRGB, Normal, SHOT1344>::Ptr feature_extractor_orig(
-            new SHOTColorEstimationOMP<PointXYZRGB, Normal, SHOT1344>);
-
-          // Set properties
-          feature_extractor_orig->setNumberOfThreads(4);
-
           // Compute features
           ros::WallTime desc_start = ros::WallTime::now();
-          Feature<PointXYZRGB, SHOT1344>::Ptr feature_extractor(feature_extractor_orig);
+          Feature<PointXYZRGB, SHOT1344>::Ptr feature_extractor(new SHOTColorEstimationOMP<PointXYZRGB, Normal, SHOT1344>);
           PointCloud<SHOT1344>::Ptr source_features(new PointCloud<SHOT1344>);
           PointCloud<SHOT1344>::Ptr target_features(new PointCloud<SHOT1344>);
           Features<SHOT1344> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
