@@ -8,7 +8,7 @@
 
 #include <pcl/common/common.h>
 #include <pcl/point_types.h>
-#include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/intensity_gradient.h>
 
 class Tools {
@@ -23,12 +23,12 @@ class Tools {
                               PointCloud<Normal>::Ptr& normals,
                               double radius_search)
   {
-    NormalEstimation<PointRGB, Normal> normal_estimation;
-    normal_estimation.setInputCloud(cloud);
-    normal_estimation.setRadiusSearch(radius_search);
-    search::KdTree<PointRGB>::Ptr kdtree(new search::KdTree<PointRGB>);
-    normal_estimation.setSearchMethod(kdtree);
-    normal_estimation.compute(*normals);
+    NormalEstimationOMP<PointRGB, Normal> normal_estimation_omp;
+    normal_estimation_omp.setInputCloud(cloud);
+    normal_estimation_omp.setRadiusSearch(radius_search);
+    search::KdTree<PointRGB>::Ptr kdtree_omp(new search::KdTree<PointRGB>);
+    normal_estimation_omp.setSearchMethod(kdtree_omp);
+    normal_estimation_omp.compute(*normals);
   }
 
   /** \brief Compute the intensity gradients

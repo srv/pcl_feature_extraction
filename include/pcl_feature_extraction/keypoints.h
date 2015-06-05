@@ -27,7 +27,7 @@
 #include <pcl/keypoints/uniform_sampling.h>
 
 // pcl features
-#include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/range_image_border_extractor.h>
 
 using namespace std;
@@ -299,7 +299,7 @@ void Keypoints::normals(const PointCloudRGB::Ptr& cloud, PointCloud<PointNormal>
 {
   // Init
   cloud_normals.reset(new PointCloud<PointNormal>);
-  NormalEstimation<PointRGB, PointNormal> ne;
+  NormalEstimationOMP<PointRGB, PointNormal> ne;
   search::KdTree<PointRGB>::Ptr tree_n(new search::KdTree<PointRGB>());
 
   ne.setInputCloud(cloud);
