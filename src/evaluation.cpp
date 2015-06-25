@@ -12,6 +12,7 @@
 
 // Generic pcl
 #include <pcl/common/common.h>
+#include <pcl/features/intensity_spin.h>
 #include <pcl/point_types.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/registration/icp.h>
@@ -63,26 +64,26 @@ string keypoints_list[] = {KP_HARRIS_3D,
                            KP_HARRIS_6D,
                            KP_ISS};
 
-// string descriptors_list[] = {DESC_SHAPE_CONTEXT,
-//                              DESC_USC,
-//                              DESC_BOARD,
-//                              DESC_BOUNDARY,
-//                              DESC_INT_GRAD,
-//                              DESC_INT_SPIN,
-//                              DESC_RIB,
-//                              DESC_SPIN_IMAGE,
-//                              DESC_MOMENT_INV,
-//                              DESC_CRH,
-//                              DESC_DIFF_OF_NORM,
-//                              DESC_FPFH,
-//                              DESC_NARF,
-//                              DESC_CVFH,
-//                              DESC_PFH,
-//                              DESC_PPAL_CURV,
-//                              DESC_RIFT,
-//                              DESC_SHOT,
-//                              DESC_SHOT_COLOR,
-//                              DESC_SHOT_LRF};
+string descriptors_list[] = {DESC_SHAPE_CONTEXT,
+                             DESC_USC,
+                             DESC_BOARD,
+                             DESC_BOUNDARY,
+                             DESC_INT_GRAD,
+                             DESC_INT_SPIN,
+                             //DESC_RIB,
+                             DESC_SPIN_IMAGE,
+                             DESC_MOMENT_INV,
+                             //DESC_CRH,
+                             //DESC_DIFF_OF_NORM,
+                             DESC_FPFH,
+                             DESC_NARF,
+                             DESC_CVFH,
+                             DESC_PFH,
+                             DESC_PPAL_CURV,
+                             DESC_RIFT,
+                             DESC_SHOT,
+                             DESC_SHOT_COLOR,
+                             DESC_SHOT_LRF};
 
 // string descriptors_list[] = {DESC_RIFT,
 //                              DESC_NARF,
@@ -92,7 +93,7 @@ string keypoints_list[] = {KP_HARRIS_3D,
 //                              DESC_SHOT,
 //                              DESC_SHOT_COLOR};
 
-string descriptors_list[] = {DESC_SHOT_COLOR};
+// string descriptors_list[] = {DESC_SHOT_COLOR};
 
 class PclFeaturesEvaluation
 {
@@ -342,16 +343,232 @@ public:
           feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
           corr_runtime = ros::WallTime::now() - corr_start;
         }
-        else if (desc_type == DESC_USC) {}
-        else if (desc_type == DESC_BOARD) {}
-        else if (desc_type == DESC_BOUNDARY) {}
-        else if (desc_type == DESC_INT_GRAD) {}
-        else if (desc_type == DESC_INT_SPIN) {}
-        else if (desc_type == DESC_RIB) {}
-        else if (desc_type == DESC_SPIN_IMAGE) {}
-        else if (desc_type == DESC_MOMENT_INV) {}
-        else if (desc_type == DESC_CRH) {}
-        else if (desc_type == DESC_DIFF_OF_NORM) {}
+        else if (desc_type == DESC_USC) {
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+          UniqueShapeContext<PointXYZRGB, ShapeContext1980>::Ptr feature_extractor_orig(
+            new UniqueShapeContext<PointXYZRGB, ShapeContext1980>);
+
+          // Set properties
+          feature_extractor_orig->setMinimalRadius(feat_radius_search_ / 10.0);
+          feature_extractor_orig->setPointDensityRadius(feat_radius_search_ / 5.0);
+
+          Feature<PointXYZRGB, ShapeContext1980>::Ptr feature_extractor(feature_extractor_orig);
+          Features<ShapeContext1980> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+          PointCloud<ShapeContext1980>::Ptr source_features(new PointCloud<ShapeContext1980>);
+          PointCloud<ShapeContext1980>::Ptr target_features(new PointCloud<ShapeContext1980>);
+          feat.compute(source_cloud_, source_keypoints, source_features);
+          feat.compute(target_cloud_, target_keypoints, target_features);
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+        }
+        else if (desc_type == DESC_BOARD) {
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+          BOARDLocalReferenceFrameEstimation<PointXYZRGB, Normal, ReferenceFrame>::Ptr feature_extractor_orig(
+            new BOARDLocalReferenceFrameEstimation<PointXYZRGB, Normal, ReferenceFrame>);
+
+          Feature<PointXYZRGB, ReferenceFrame>::Ptr feature_extractor(feature_extractor_orig);
+          PointCloud<ReferenceFrame>::Ptr source_features(new PointCloud<ReferenceFrame>);
+          PointCloud<ReferenceFrame>::Ptr target_features(new PointCloud<ReferenceFrame>);
+          Features<ReferenceFrame> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+          feat.compute(source_cloud_, source_keypoints, source_features);
+          feat.compute(target_cloud_, target_keypoints, target_features);
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+        }
+        else if (desc_type == DESC_BOUNDARY) {
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+          BoundaryEstimation<PointXYZRGB, Normal, Boundary>::Ptr feature_extractor_orig(
+            new BoundaryEstimation<PointXYZRGB, Normal, Boundary>);
+
+          Feature<PointXYZRGB, Boundary>::Ptr feature_extractor(feature_extractor_orig);
+          PointCloud<Boundary>::Ptr source_features(new PointCloud<Boundary>);
+          PointCloud<Boundary>::Ptr target_features(new PointCloud<Boundary>);
+          Features<Boundary> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+          feat.compute(source_cloud_, source_keypoints, source_features);
+          feat.compute(target_cloud_, target_keypoints, target_features);
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+        }
+        else if (desc_type == DESC_INT_GRAD) {////////////////////////////////////////////////////////////////////////////////////////////
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+          PointCloud<PointXYZI>::Ptr source_intensities(new PointCloud<PointXYZI>);
+          PointCloud<PointXYZI>::Ptr target_intensities(new PointCloud<PointXYZI>);
+          PointCloud<PointXYZI>::Ptr source_keypoints_intensities(new PointCloud<PointXYZI>);
+          PointCloud<PointXYZI>::Ptr target_keypoints_intensities(new PointCloud<PointXYZI>);
+          PointCloud<IntensityGradient>::Ptr source_features(new PointCloud<IntensityGradient>);
+          PointCloud<IntensityGradient>::Ptr target_features(new PointCloud<IntensityGradient>);
+          PointCloudXYZRGBtoXYZI(*source_cloud_, *source_intensities);
+          PointCloudXYZRGBtoXYZI(*target_cloud_, *target_intensities);
+          PointCloudXYZRGBtoXYZI(*source_keypoints, *source_keypoints_intensities);
+          PointCloudXYZRGBtoXYZI(*target_keypoints, *target_keypoints_intensities);
+          IntensityGradientEstimation<PointXYZI,
+                                      Normal,
+                                      IntensityGradient,
+                                      common::IntensityFieldAccessor<PointXYZI> > feature_extractor;
+          typename PointCloud<Normal>::Ptr source_normals (new PointCloud<Normal>);
+          typename PointCloud<Normal>::Ptr target_normals (new PointCloud<Normal>);
+          Tools::estimateNormals(source_cloud_, source_normals, normal_radius_search_);
+          Tools::estimateNormals(target_cloud_, target_normals, normal_radius_search_);
+
+          // Source
+          feature_extractor.setInputNormals(source_normals);
+          feature_extractor.setSearchSurface(source_intensities);
+          feature_extractor.setInputCloud(source_keypoints_intensities);
+          search::KdTree<PointXYZI>::Ptr kdtree(new search::KdTree<PointXYZI>);
+          feature_extractor.setSearchMethod(kdtree);
+          feature_extractor.setRadiusSearch(feat_radius_search_);
+          feature_extractor.compute(*source_features);
+
+          // Target
+          feature_extractor.setInputNormals(target_normals);
+          feature_extractor.setSearchSurface(target_intensities);
+          feature_extractor.setInputCloud(target_keypoints_intensities);
+          feature_extractor.setSearchMethod(kdtree);
+          feature_extractor.setRadiusSearch(feat_radius_search_);
+          feature_extractor.compute(*target_features);
+
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          Features<IntensityGradient> feat;
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+        }
+        else if (desc_type == DESC_INT_SPIN) {
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+
+          PointCloud<PointXYZI>::Ptr source_intensities(new PointCloud<PointXYZI>);
+          PointCloud<PointXYZI>::Ptr target_intensities(new PointCloud<PointXYZI>);
+          PointCloud<PointXYZI>::Ptr source_keypoints_intensities(new PointCloud<PointXYZI>);
+          PointCloud<PointXYZI>::Ptr target_keypoints_intensities(new PointCloud<PointXYZI>);
+          PointCloud<Histogram<20> >::Ptr source_features(new PointCloud<Histogram<20> >);
+          PointCloud<Histogram<20> >::Ptr target_features(new PointCloud<Histogram<20> >);
+          PointCloudXYZRGBtoXYZI(*source_cloud_, *source_intensities);
+          PointCloudXYZRGBtoXYZI(*target_cloud_, *target_intensities);
+          PointCloudXYZRGBtoXYZI(*source_keypoints, *source_keypoints_intensities);
+          PointCloudXYZRGBtoXYZI(*target_keypoints, *target_keypoints_intensities);
+
+          IntensitySpinEstimation<PointXYZI,
+                                  Histogram<20> > feature_extractor;
+          // typename PointCloud<Normal>::Ptr source_normals (new PointCloud<Normal>);
+          // typename PointCloud<Normal>::Ptr target_normals (new PointCloud<Normal>);
+          // Tools::estimateNormals(source_cloud_, source_normals, normal_radius_search_);
+          // Tools::estimateNormals(target_cloud_, target_normals, normal_radius_search_);
+
+          // Source
+          //feature_extractor.setInputNormals(source_normals);
+          feature_extractor.setSearchSurface(source_intensities);
+          feature_extractor.setInputCloud(source_keypoints_intensities);
+          search::KdTree<PointXYZI>::Ptr kdtree(new search::KdTree<PointXYZI>);
+          feature_extractor.setSearchMethod(kdtree);
+          feature_extractor.setRadiusSearch(feat_radius_search_);
+          feature_extractor.compute(*source_features);
+
+          // Target
+          //feature_extractor.setInputNormals(target_normals);
+          feature_extractor.setSearchSurface(target_intensities);
+          feature_extractor.setInputCloud(target_keypoints_intensities);
+          feature_extractor.setSearchMethod(kdtree);
+          feature_extractor.setRadiusSearch(feat_radius_search_);
+          feature_extractor.compute(*target_features);
+
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          Features<Histogram<20> > feat;
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+        } else if (desc_type == DESC_SPIN_IMAGE) {
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+          Feature<PointXYZRGB, Histogram<153> >::Ptr feature_extractor(new SpinImageEstimation<PointXYZRGB, Normal, Histogram<153> >);
+          PointCloud<Histogram<153> >::Ptr source_features(new PointCloud<Histogram<153> >);
+          PointCloud<Histogram<153> >::Ptr target_features(new PointCloud<Histogram<153> >);
+          Features<Histogram<153> > feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+          feat.compute(source_cloud_, source_keypoints, source_features);
+          feat.compute(target_cloud_, target_keypoints, target_features);
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+        } else if (desc_type == DESC_MOMENT_INV) {
+          // Compute features
+          ros::WallTime desc_start = ros::WallTime::now();
+          Feature<PointXYZRGB, MomentInvariants>::Ptr feature_extractor(new MomentInvariantsEstimation<PointXYZRGB, MomentInvariants>);
+          PointCloud<MomentInvariants>::Ptr source_features(new PointCloud<MomentInvariants>);
+          PointCloud<MomentInvariants>::Ptr target_features(new PointCloud<MomentInvariants>);
+          Features<MomentInvariants> feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+          feat.compute(source_cloud_, source_keypoints, source_features);
+          feat.compute(target_cloud_, target_keypoints, target_features);
+          desc_runtime = ros::WallTime::now() - desc_start;
+          source_feat_size = source_features->points.size();
+          target_feat_size = target_features->points.size();
+
+          // Find correspondences
+          ros::WallTime corr_start = ros::WallTime::now();
+          feat.findCorrespondences(source_features, target_features, correspondences);
+          feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          corr_runtime = ros::WallTime::now() - corr_start;
+
+
+        } else if (desc_type == DESC_CRH) {
+          // // Compute features
+          // ros::WallTime desc_start = ros::WallTime::now();
+          // Feature<PointXYZRGB, Histogram<90> >::Ptr feature_extractor(new CRHEstimation<PointXYZRGB, Normal, Histogram<90> >);
+          // PointCloud<Histogram<90> >::Ptr source_features(new PointCloud<Histogram<90> >);
+          // PointCloud<Histogram<90> >::Ptr target_features(new PointCloud<Histogram<90> >);
+          // Features<Histogram<90> > feat(feature_extractor, feat_radius_search_, normal_radius_search_);
+          // feat.compute(source_cloud_, source_keypoints, source_features);
+          // feat.compute(target_cloud_, target_keypoints, target_features);
+          // desc_runtime = ros::WallTime::now() - desc_start;
+          // source_feat_size = source_features->points.size();
+          // target_feat_size = target_features->points.size();
+
+          // // Find correspondences
+          // ros::WallTime corr_start = ros::WallTime::now();
+          // feat.findCorrespondences(source_features, target_features, correspondences);
+          // feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
+          // corr_runtime = ros::WallTime::now() - corr_start;
+        }
         else if (desc_type == DESC_FPFH)
         {
           // Compute features
