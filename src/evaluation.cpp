@@ -67,7 +67,7 @@ string keypoints_list[] = {KP_HARRIS_3D,
 string descriptors_list[] = {DESC_SHAPE_CONTEXT,
                              DESC_USC,
                              DESC_BOARD,
-                             DESC_BOUNDARY,
+                       //      DESC_BOUNDARY,
                              DESC_INT_GRAD,
                              DESC_INT_SPIN,
                              //DESC_RIB,
@@ -799,10 +799,7 @@ public:
 
           // Find correspondences
           ros::WallTime corr_start = ros::WallTime::now();
-          registration::CorrespondenceEstimation<SHOT1344, SHOT1344> corr_est;
-          corr_est.setInputSource(source_features);
-          corr_est.setInputTarget(target_features);
-          corr_est.determineReciprocalCorrespondences(*correspondences);
+          feat.findCorrespondences(source_features, target_features, correspondences);
           feat.filterCorrespondences(source_keypoints, target_keypoints, correspondences, filtered_correspondences, ransac_tf);
           corr_runtime = ros::WallTime::now() - corr_start;
         }
